@@ -1,0 +1,2012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏多账号收益计算器</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh; padding: 12px; color: #e2e8f0;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 16px; }
+    .header h1 { font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .header p { color: #64748b; margin-top: 4px; font-size: 13px; }
+    
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
+    .tab-btn {
+      padding: 8px 14px; border: none; background: rgba(255,255,255,0.05);
+      border-radius: 6px; cursor: pointer; font-size: 12px; color: #94a3b8;
+      display: flex; align-items: center; gap: 4px; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .tab-btn.active { background: #10b981; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .card {
+      background: rgba(30, 41, 59, 0.8); border-radius: 10px; padding: 14px;
+      margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .card-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #10b981; display: flex; align-items: center; gap: 6px; }
+    .card-desc { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+    
+    .profit-card { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; }
+    .profit-card .card-title { color: rgba(255,255,255,0.95); }
+    .profit-card .card-desc { color: rgba(255,255,255,0.7); }
+    .profit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+    .profit-item { text-align: center; }
+    .profit-label { font-size: 10px; opacity: 0.8; }
+    .profit-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+    .profit-value.small { font-size: 14px; }
+    
+    .summary-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none; }
+    .summary-card .card-title { color: rgba(255,255,255,0.95); }
+    
+    .rate-card { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border: none; }
+    .rate-card .card-title { color: rgba(255,255,255,0.95); }
+    .rate-card .card-desc { color: rgba(255,255,255,0.7); }
+    
+    .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    .rate-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+    .rate-label { font-size: 10px; color: #64748b; }
+    .rate-value { font-size: 14px; font-weight: 600; color: #10b981; margin-top: 2px; }
+    .rate-note { font-size: 9px; color: #475569; margin-top: 1px; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 4px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    th { font-weight: 500; color: #64748b; font-size: 11px; background: rgba(0,0,0,0.2); }
+    td { font-size: 12px; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+    
+    input[type="number"], input[type="text"], input[type="date"], select {
+      padding: 6px 8px; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px; font-size: 12px; width: 100%;
+      background: rgba(0,0,0,0.3); color: #fff; text-align: center;
+    }
+    input:focus, select:focus { outline: none; border-color: #10b981; }
+    input[type="number"] { max-width: 70px; }
+    input.wide { max-width: 100px; }
+    textarea {
+      width: 100%; min-height: 200px; padding: 10px;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+      background: rgba(0,0,0,0.3); color: #fff; font-size: 12px;
+      font-family: monospace; resize: vertical;
+    }
+    
+    .btn {
+      padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 12px; display: inline-flex; align-items: center; gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #10b981; color: white; }
+    .btn-primary:hover { background: #059669; }
+    .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-info { background: #3b82f6; color: white; }
+    .btn-info:hover { background: #2563eb; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-purple { background: #8b5cf6; color: white; }
+    .btn-purple:hover { background: #7c3aed; }
+    .btn-small { padding: 4px 8px; font-size: 11px; }
+    
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000; padding: 15px;
+    }
+    .modal.show { display: flex; }
+    .modal-content { background: #1e293b; padding: 16px; border-radius: 10px; width: 100%; max-width: 600px; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
+    .modal-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 15px; font-weight: 600; }
+    .modal-footer { margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    
+    .chart-container { position: relative; height: 220px; margin-top: 10px; }
+    .chart-container.small { height: 160px; }
+    .chart-container.large { height: 280px; }
+    .table-wrapper { overflow-x: auto; }
+    
+    .delete-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 2px; }
+    .delete-btn:hover { color: #f87171; }
+    
+    .account-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .account-tab {
+      padding: 6px 12px; border: none; background: rgba(255,255,255,0.05);
+      border-radius: 4px; cursor: pointer; font-size: 11px; color: #94a3b8;
+      transition: all 0.2s;
+    }
+    .account-tab:hover { background: rgba(255,255,255,0.1); }
+    .account-tab.active { background: #3b82f6; color: white; }
+    
+    .account-card { border-left: 3px solid #3b82f6; }
+    .account-card.account-1 { border-left-color: #3b82f6; }
+    .account-card.account-2 { border-left-color: #8b5cf6; }
+    .account-card.account-3 { border-left-color: #f59e0b; }
+    .account-card.account-4 { border-left-color: #ef4444; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+    .stat-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; text-align: center; }
+    .stat-label { font-size: 10px; color: #64748b; }
+    .stat-value { font-size: 18px; font-weight: 700; color: #10b981; margin-top: 2px; }
+    
+    .flow-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; margin-top: 10px; text-align: center; }
+    .flow-box p { font-size: 12px; margin: 4px 0; }
+    .flow-arrow { color: #10b981; margin: 0 6px; }
+    
+    .highlight { color: #10b981; font-weight: 600; }
+    .warning { color: #f59e0b; font-weight: 600; }
+    .danger { color: #ef4444; }
+    
+    .inline-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+    .inline-form .form-group { margin-bottom: 0; }
+    
+    .account-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .account-summary-item { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; }
+    .account-summary-item h4 { font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .account-summary-item .detail { font-size: 11px; color: #64748b; margin: 2px 0; }
+    .account-summary-item .value { color: #10b981; font-weight: 600; }
+    
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+    .filter-row .form-group { margin-bottom: 0; }
+    
+    .report-preview {
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px; padding: 12px; margin-top: 10px;
+      font-family: monospace; font-size: 11px; white-space: pre-wrap;
+      max-height: 400px; overflow-y: auto; color: #94a3b8;
+    }
+    
+    .import-hint {
+      background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 11px; color: #93c5fd;
+    }
+    .import-hint code {
+      background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;
+      font-family: monospace;
+    }
+    
+    .time-badge {
+      display: inline-block; padding: 2px 6px; background: rgba(59, 130, 246, 0.2);
+      border-radius: 3px; font-size: 10px; color: #93c5fd; margin-left: 4px;
+    }
+    
+    .price-timeline {
+      background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; margin-top: 10px;
+    }
+    .price-timeline-item {
+      display: flex; justify-content: space-between; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px;
+    }
+    .price-timeline-item:last-child { border-bottom: none; }
+    
+    .sub-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .sub-tab {
+      padding: 4px 10px; border: none; background: rgba(255,255,255,0.05);
+      border-radius: 4px; cursor: pointer; font-size: 11px; color: #94a3b8;
+    }
+    .sub-tab.active { background: rgba(16, 185, 129, 0.3); color: #10b981; }
+    
+    .rate-input-row {
+      display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px;
+    }
+    .rate-input-row .form-group { margin-bottom: 0; flex: 1; }
+    
+    @media (max-width: 600px) {
+      .header h1 { font-size: 18px; }
+      .profit-value { font-size: 16px; }
+      .tab-btn { padding: 6px 10px; font-size: 11px; }
+      th, td { padding: 6px 2px; font-size: 10px; }
+      input[type="number"] { max-width: 50px; padding: 4px; }
+      .chart-container { height: 180px; }
+    }
+
+    /* 登录页面样式 */
+    #loginPage {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background: rgba(30, 41, 59, 0.95); padding: 30px 40px;
+      border-radius: 12px; text-align: center; max-width: 360px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .login-box h2 { color: #10b981; margin-bottom: 20px; font-size: 20px; }
+    .login-box input {
+      width: 100%; margin-bottom: 12px; padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+      background: rgba(0,0,0,0.3); color: #fff; font-size: 14px;
+    }
+    .login-box input:focus { outline: none; border-color: #10b981; }
+    .login-box .btn { width: 100%; padding: 10px; font-size: 14px; margin-top: 8px; }
+    .login-error { color: #ef4444; font-size: 12px; margin-top: 10px; }
+    .admin-badge {
+      background: #f59e0b; color: #000; padding: 2px 8px;
+      border-radius: 4px; font-size: 11px; font-weight: 600;
+    }
+    .user-badge {
+      background: #3b82f6; color: #fff; padding: 2px 8px;
+      border-radius: 4px; font-size: 11px;
+    }
+    .hidden { display: none !important; }
+    .admin-only { display: none; }
+    body.admin-mode .admin-only { display: inline-flex; }
+
+  </style>
+</head>
+<body>
+  <!-- 登录页面 -->
+  <div id="loginPage">
+    <div class="login-box">
+      <h2>🎮 游戏收益计算器</h2>
+      <input type="text" id="loginAccount" placeholder="请输入账号">
+      <input type="password" id="loginPassword" placeholder="请输入密码">
+      <button class="btn btn-primary" onclick="doLogin()">登 录</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+
+
+  <div class="container">
+    <div id="userBar" class="hidden" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div><span id="userBadge"></span> <span id="userName"></span></div>
+      <button class="btn btn-outline btn-small" onclick="doLogout()">退出登录</button>
+    </div>
+
+    <div class="header">
+      <h1>🎮 多账号游戏收益计算器</h1>
+      <p>道具 → 玉石 → 宝石 → 人民币 | 支持多账号管理 | 实时价格更新</p>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 总览</button>
+      <button class="tab-btn" onclick="switchTab('accounts')">👤 账号管理</button>
+      <button class="tab-btn" onclick="switchTab('items')">📦 道具价格</button>
+      <button class="tab-btn" onclick="switchTab('rates')">💱 兑换率</button>
+      <button class="tab-btn" onclick="switchTab('report')">📄 报表导出</button>
+      <button class="tab-btn" onclick="switchTab('import')">📥 数据导入</button>
+      <button class="tab-btn" onclick="switchTab('history')">📈 历史走势</button>
+      <button class="tab-btn" onclick="switchTab('settings')">⚙️ 设置</button>
+    </div>
+    
+    <!-- 总览页面 -->
+    <div id="overview" class="tab-content active">
+      <div class="card summary-card">
+        <div class="card-title">💰 收益统计</div>
+        <div class="profit-grid">
+          <div class="profit-item">
+            <div class="profit-label">已实现收益</div>
+            <div class="profit-value">¥<span id="realizedProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">今日收益</div>
+            <div class="profit-value">¥<span id="todayProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">本周收益</div>
+            <div class="profit-value">¥<span id="weekProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">本月收益</div>
+            <div class="profit-value">¥<span id="monthProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">本年收益</div>
+            <div class="profit-value">¥<span id="yearProfit">0.00</span></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card profit-card">
+        <div class="card-title">📈 今日收益明细（基于最新价格计算）</div>
+        <div class="profit-grid">
+          <div class="profit-item">
+            <div class="profit-label">总收益</div>
+            <div class="profit-value">¥<span id="totalGrossProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">消耗成本</div>
+            <div class="profit-value warning">-¥<span id="totalConsumeCost">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">净利润</div>
+            <div class="profit-value">¥<span id="totalNetProfit">0.00</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">总玉石</div>
+            <div class="profit-value small"><span id="totalJade">0</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">总宝石</div>
+            <div class="profit-value small"><span id="totalGem">0</span></div>
+          </div>
+          <div class="profit-item">
+            <div class="profit-label">月预估</div>
+            <div class="profit-value small">¥<span id="monthEstimate">0</span></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card rate-card">
+        <div class="card-title">💱 当前兑换率（实时更新）</div>
+        <div class="rate-grid" id="rateDisplay"></div>
+        <div class="flow-box">
+          <p><b>兑换链路</b></p>
+          <p>道具/罐头 <span class="flow-arrow">→</span> 玉石 <span class="flow-arrow">→</span> 宝石 <span class="flow-arrow">→</span> 人民币</p>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">👥 各账号收益明细</div>
+        <div class="account-summary" id="accountSummary"></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📋 今日各账号详细数据</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>账号</th>
+                <th>道具收益(玉石)</th>
+                <th>抓宠罐头</th>
+                <th>罐头收益(玉石)</th>
+                <th>消耗罐头</th>
+                <th>消耗成本(玉石)</th>
+                <th>净玉石</th>
+                <th>净收益(¥)</th>
+              </tr>
+            </thead>
+            <tbody id="overviewTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 账号管理页面 -->
+    <div id="accounts" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+          <div class="card-title" style="margin-bottom: 0;">👤 账号列表</div>
+          <button class="btn btn-primary btn-small" class="admin-only" onclick="showAddAccountModal()">➕ 新建账号</button>
+        </div>
+        <div class="account-tabs" id="accountTabs"></div>
+      </div>
+      <div id="accountDetail"></div>
+    </div>
+    
+    <!-- 道具价格页面 -->
+    <div id="items" class="tab-content">
+      <div class="card">
+        <div class="card-title">📦 道具价格设置</div>
+        <div class="card-desc">价格单位：玉石 | 支持一天多次记录，精确到分钟</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>道具名称</th><th>当前单价(玉石)</th><th>操作</th></tr></thead>
+            <tbody id="itemsTable"></tbody>
+          </table>
+        </div>
+        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-small" class="admin-only" onclick="showAddItemModal()">➕ 添加道具</button>
+          <button class="btn btn-warning btn-small" class="admin-only" onclick="savePriceRecordWithTime()">💾 保存当前价格（含时间戳）</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📊 今日道具价格变化</div>
+        <div id="todayPriceTimeline" class="price-timeline"></div>
+      </div>
+    </div>
+    
+    <!-- 兑换率页面 -->
+    <div id="rates" class="tab-content">
+      <div class="card rate-card">
+        <div class="card-title">💱 兑换率设置</div>
+        <div class="card-desc">实时更新兑换率，影响收益计算</div>
+        
+        <div class="rate-input-row">
+          <div class="form-group">
+            <label>玉石换宝石 (1玉石 = ?宝石)</label>
+            <input type="number" id="rateJadeToGem" step="0.0001" onchange="if(!checkAdmin())return;updateRate('jadeToGem', this.value)" style="max-width:120px">
+          </div>
+          <div class="form-group">
+            <label>扣费后实际</label>
+            <div style="padding:6px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:12px;">
+              <span id="actualJadeToGem">0.0108</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="rate-input-row">
+          <div class="form-group">
+            <label>宝石换人民币 (1宝石 = ?元)</label>
+            <input type="number" id="rateGemToRmb" step="0.01" onchange="if(!checkAdmin())return;updateRate('gemToRmb', this.value)" style="max-width:120px">
+          </div>
+        </div>
+        
+        <div class="rate-input-row">
+          <div class="form-group">
+            <label>手续费率 (%)</label>
+            <input type="number" id="feeRate" step="1" onchange="if(!checkAdmin())return;updateRate('feeRate', this.value)" style="max-width:80px">
+          </div>
+          <div class="form-group">
+            <label>当前</label>
+            <div style="padding:6px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:12px;">
+              <span id="feeDisplay">10</span>%
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-purple btn-small" class="admin-only" onclick="saveRateRecordWithTime()">💾 保存当前兑换率（含时间戳）</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📊 今日兑换率变化</div>
+        <div id="todayRateTimeline" class="price-timeline"></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📋 兑换率历史记录</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>日期</th><th>时间</th><th>玉石→宝石</th><th>宝石→人民币</th><th>手续费率</th><th>操作</th></tr></thead>
+            <tbody id="rateHistoryTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 报表导出页面 -->
+    <div id="report" class="tab-content">
+      <div class="card">
+        <div class="card-title">📄 导出报表</div>
+        <div class="card-desc">导出格式与导入格式一致，可直接用于导入</div>
+        
+        <div class="filter-row">
+          <div class="form-group">
+            <label>开始日期</label>
+            <input type="date" id="reportStartDate" style="max-width:130px">
+          </div>
+          <div class="form-group">
+            <label>结束日期</label>
+            <input type="date" id="reportEndDate" style="max-width:130px">
+          </div>
+          <div class="form-group">
+            <label>账号</label>
+            <select id="reportAccount" style="max-width:120px">
+              <option value="all">全部账号</option>
+            </select>
+          </div>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button class="btn btn-primary btn-small" onclick="generateReport('all')">📊 生成完整报表</button>
+          <button class="btn btn-info btn-small" onclick="generateReport('profit')">💰 仅收益记录</button>
+          <button class="btn btn-info btn-small" onclick="generateReport('price')">📦 仅价格记录</button>
+          <button class="btn btn-purple btn-small" onclick="generateReport('rate')">💱 仅兑换率</button>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button class="btn btn-outline btn-small" onclick="copyReport()">📋 复制到剪贴板</button>
+          <button class="btn btn-outline btn-small" onclick="downloadReport()">💾 下载文本</button>
+        </div>
+        
+        <div class="report-preview" id="reportPreview">点击上方按钮生成报表...</div>
+      </div>
+    </div>
+    
+    <!-- 数据导入页面 -->
+    <div id="import" class="tab-content">
+      <div class="card">
+        <div class="card-title">📥 文本导入数据</div>
+        <div class="card-desc">粘贴文本数据，系统自动识别并导入</div>
+        
+        <div class="import-hint">
+          <b>支持的格式：</b><br><br>
+          <b>【收益记录】</b><br>
+          <code>日期: 2024-01-15</code><br>
+          <code>账号一: 进阶石5,贝壳100,罐头20,抓宠罐头10,消耗罐头5</code><br><br>
+          <b>【道具价格】</b><br>
+          <code>价格: 进阶石8.5,贝壳1.35,罐头1.28</code><br>
+          <code>价格 10:30: 进阶石8.6,罐头1.30</code><br><br>
+          <b>【兑换率】</b><br>
+          <code>兑换率: 玉石换宝石0.012,宝石换人民币1.35,手续费10</code><br>
+          <code>兑换率 14:30: 玉石换宝石0.013,宝石换人民币1.40</code><br><br>
+          <b>提示：</b>可粘贴多天数据，系统自动识别
+        </div>
+        
+        <div class="form-group">
+          <label>粘贴数据</label>
+          <textarea id="importText" placeholder="在此粘贴文本数据..."></textarea>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-small" class="admin-only" onclick="parseAndImport()">🔍 解析并导入</button>
+          <button class="btn btn-outline btn-small" class="admin-only" onclick="document.getElementById('importFile').click()">📁 导入JSON文件</button>
+        </div>
+        
+        <div id="importResult" style="margin-top:10px;"></div>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    
+    <!-- 历史走势页面 -->
+    <div id="history" class="tab-content">
+      <div class="card">
+        <div class="card-title">📈 每日收益走势</div>
+        <div class="inline-form">
+          <div class="form-group">
+            <label>选择账号</label>
+            <select id="profitChartAccount" onchange="renderProfitChart()" style="max-width:120px">
+              <option value="all">全部账号</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container large">
+          <canvas id="profitChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📈 各账号收益对比</div>
+        <div class="chart-container">
+          <canvas id="accountCompareChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📈 道具价格走势</div>
+        <div class="inline-form">
+          <div class="form-group">
+            <label>选择道具</label>
+            <select id="priceChartItem" onchange="renderPriceChart()" style="max-width:120px"></select>
+          </div>
+          <div class="form-group">
+            <label>查看模式</label>
+            <select id="priceChartMode" onchange="renderPriceChart()" style="max-width:120px">
+              <option value="overall">总体走势</option>
+              <option value="today">今日详细</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📈 兑换率走势</div>
+        <div class="inline-form">
+          <div class="form-group">
+            <label>选择类型</label>
+            <select id="rateChartType" onchange="renderRateChart()" style="max-width:140px">
+              <option value="jadeToGem">玉石→宝石</option>
+              <option value="gemToRmb">宝石→人民币</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>查看模式</label>
+            <select id="rateChartMode" onchange="renderRateChart()" style="max-width:120px">
+              <option value="overall">总体走势</option>
+              <option value="today">今日详细</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="rateChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📋 收益历史记录</div>
+        <div class="inline-form">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="date" id="profitRecordDate" style="max-width:130px">
+          </div>
+          <button class="btn btn-primary btn-small" onclick="saveProfitRecord()">💾 记录今日收益</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>日期</th><th>账号</th><th>道具明细</th><th>总收益(¥)</th><th>消耗(¥)</th><th>净利润(¥)</th><th>操作</th></tr></thead>
+            <tbody id="profitHistoryTable"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📋 道具价格历史记录</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>日期</th><th>时间</th><th>道具</th><th>价格(玉石)</th><th>操作</th></tr></thead>
+            <tbody id="priceHistoryTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 设置页面 -->
+    <div id="settings" class="tab-content">
+      <div class="card">
+        <div class="card-title">📊 数据统计</div>
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-label">账号数量</div><div class="stat-value" id="statAccounts">0</div></div>
+          <div class="stat-item"><div class="stat-label">道具种类</div><div class="stat-value" id="statItems">0</div></div>
+          <div class="stat-item"><div class="stat-label">价格记录</div><div class="stat-value" id="statPriceRecords">0</div></div>
+          <div class="stat-item"><div class="stat-label">兑换率记录</div><div class="stat-value" id="statRateRecords">0</div></div>
+          <div class="stat-item"><div class="stat-label">收益记录</div><div class="stat-value" id="statProfitRecords">0</div></div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">🗄️ 数据管理</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline btn-small" onclick="exportData()">📤 导出JSON</button>
+          <button class="btn btn-danger btn-small" class="admin-only" onclick="resetAllData()">🗑️ 重置数据</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 添加账号弹窗 -->
+  <div id="addAccountModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><div class="modal-title">新建账号</div></div>
+      <div class="form-group"><label>账号名称</label><input type="text" id="newAccountName" placeholder="如：账号一"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-small" onclick="hideAddAccountModal()">取消</button>
+        <button class="btn btn-primary btn-small" onclick="addAccount()">创建</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 添加道具弹窗 -->
+  <div id="addItemModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><div class="modal-title">添加道具</div></div>
+      <div class="form-group"><label>道具名称</label><input type="text" id="newItemName" placeholder="如：进阶石"></div>
+      <div class="form-group"><label>单价（玉石）</label><input type="number" id="newItemPrice" step="0.01" value="0"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-small" onclick="hideAddItemModal()">取消</button>
+        <button class="btn btn-primary btn-small" onclick="addItem()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== 账号配置 ==========
+    const ADMIN_ACCOUNT = '18679012034';
+    const ADMIN_PASSWORD = '628727';
+    
+    let currentUser = null;
+    let isAdmin = false;
+    let gameData = null;
+    let currentAccountId = '1';
+    let priceChart = null;
+    let profitChart = null;
+    // ========== 登录相关 ==========
+    async function doLogin() {
+      const account = document.getElementById('loginAccount').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('loginError');
+      
+      if (!account || !password) {
+        errorDiv.textContent = '请输入账号和密码';
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account, password })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+          currentUser = account;
+          isAdmin = result.isAdmin;
+          sessionStorage.setItem('loggedIn', 'true');
+          sessionStorage.setItem('userAccount', account);
+          sessionStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+          
+          document.getElementById('loginPage').classList.add('hidden');
+          document.getElementById('userBar').classList.remove('hidden');
+          
+          const badge = isAdmin ? '<span class="admin-badge">管理员</span>' : '<span class="user-badge">用户</span>';
+          document.getElementById('userBadge').innerHTML = badge;
+          document.getElementById('userName').textContent = account;
+          
+          if (isAdmin) {
+            document.body.classList.add('admin-mode');
+          }
+          
+          // 加载数据
+          gameData = await loadData();
+          currentAccountId = gameData.accounts[0]?.id || '1';
+          renderAll();
+          initReportDates();
+        } else {
+          errorDiv.textContent = result.message || '账号或密码错误';
+        }
+      } catch (e) {
+        console.error('登录失败:', e);
+        errorDiv.textContent = '登录失败，请检查网络';
+      }
+    }
+    
+    function doLogout() {
+      currentUser = null;
+      isAdmin = false;
+      sessionStorage.clear();
+      document.getElementById('loginPage').classList.remove('hidden');
+      document.getElementById('userBar').classList.add('hidden');
+      document.body.classList.remove('admin-mode');
+      document.getElementById('loginAccount').value = '';
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginError').textContent = '';
+    }
+    
+    function checkLogin() {
+      const loggedIn = sessionStorage.getItem('loggedIn') === 'true';
+      if (loggedIn) {
+        currentUser = sessionStorage.getItem('userAccount');
+        isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+        
+        document.getElementById('loginPage').classList.add('hidden');
+        document.getElementById('userBar').classList.remove('hidden');
+        
+        const badge = isAdmin ? '<span class="admin-badge">管理员</span>' : '<span class="user-badge">用户</span>';
+        document.getElementById('userBadge').innerHTML = badge;
+        document.getElementById('userName').textContent = currentUser;
+        
+        if (isAdmin) {
+          document.body.classList.add('admin-mode');
+        }
+        
+        return true;
+      }
+      return false;
+    }
+    
+    function checkAdmin() {
+      if (!isAdmin) {
+        alert('此功能需要管理员权限！');
+        return false;
+      }
+      return true;
+    }
+    
+    // ========== 数据持久化 ==========
+    const STORAGE_KEY = 'game_multi_account_calculator_v4';
+    
+    const DEFAULT_DATA = {
+      exchangeRate: { jadeToGem: 0.012, gemToRmb: 1.35, feeRate: 0.1 },
+      items: [
+        { id: '1', name: '进阶石', price: 8.5 },
+        { id: '2', name: '贝壳', price: 1.35 },
+        { id: '3', name: '罐头', price: 1.28 },
+        { id: '4', name: '玉石', price: 1 }
+      ],
+      accounts: [
+        { id: '1', name: '账号一', dailyData: {} },
+        { id: '2', name: '账号二', dailyData: {} },
+        { id: '3', name: '账号三', dailyData: {} },
+        { id: '4', name: '账号四', dailyData: {} }
+      ],
+      priceHistory: [],
+      rateHistory: [],
+      profitHistory: [],
+      realizedProfit: 0
+    };
+    
+    function initAccountData(account) {
+      if (!account.dailyData) account.dailyData = {};
+      if (!account.dailyData.items) account.dailyData.items = {};
+      if (account.dailyData.canConsume === undefined) account.dailyData.canConsume = 0;
+      if (account.dailyData.petCan === undefined) account.dailyData.petCan = 0;
+    }
+    
+    // 从 MongoDB 加载数据
+    async function loadData() {
+      try {
+        const res = await fetch('/api/data');
+        const result = await res.json();
+        if (result.success && result.data) {
+          const data = result.data;
+          data.accounts.forEach(a => initAccountData(a));
+          if (data.realizedProfit === undefined) data.realizedProfit = 0;
+          if (!data.rateHistory) data.rateHistory = [];
+          console.log('数据加载成功');
+          return data;
+        }
+      } catch (e) { 
+        console.error('从数据库加载失败:', e); 
+      }
+      const data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      data.accounts.forEach(a => initAccountData(a));
+      return data;
+    }
+    
+    // 保存数据到 MongoDB
+    async function saveData() { 
+      if (!gameData) return;
+      try {
+        const res = await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: gameData })
+        });
+        const result = await res.json();
+        if (result.success) {
+          console.log('数据保存成功');
+        } else {
+          console.error('保存失败:', result.error);
+        }
+      } catch (e) {
+        console.error('保存到数据库失败:', e);
+      }
+    }
+    
+    // 已在顶部定义全局变量
+    
+    function getActualRates() {
+      const r = gameData.exchangeRate;
+      return { jadeToGem: r.jadeToGem * (1 - r.feeRate), gemToRmb: r.gemToRmb };
+    }
+    
+    function jadeToRmb(jade) {
+      const a = getActualRates();
+      return jade * a.jadeToGem * a.gemToRmb;
+    }
+    
+    function jadeToGem(jade) {
+      return jade * getActualRates().jadeToGem;
+    }
+    
+    function getCanPrice() {
+      const can = gameData.items.find(i => i.name === '罐头');
+      return can ? can.price : 1.28;
+    }
+    
+    function calcAccountItemJade(account) {
+      initAccountData(account);
+      let total = 0;
+      gameData.items.forEach(item => {
+        const output = account.dailyData.items[item.id] || 0;
+        total += item.price * output;
+      });
+      return total;
+    }
+    
+    function calcAccountCanJade(account) {
+      initAccountData(account);
+      return (account.dailyData.petCan || 0) * getCanPrice();
+    }
+    
+    function calcAccountConsumeJade(account) {
+      initAccountData(account);
+      return (account.dailyData.canConsume || 0) * getCanPrice();
+    }
+    
+    function calcAccountTotalJade(account) {
+      return calcAccountItemJade(account) + calcAccountCanJade(account);
+    }
+    
+    function calcAccountNetJade(account) {
+      return calcAccountTotalJade(account) - calcAccountConsumeJade(account);
+    }
+    
+    function calcAllAccounts() {
+      let totalJade = 0, totalConsumeJade = 0;
+      gameData.accounts.forEach(acc => {
+        totalJade += calcAccountTotalJade(acc);
+        totalConsumeJade += calcAccountConsumeJade(acc);
+      });
+      return {
+        totalJade,
+        totalGem: jadeToGem(totalJade),
+        grossProfit: jadeToRmb(totalJade),
+        consumeCost: jadeToRmb(totalConsumeJade),
+        netProfit: jadeToRmb(totalJade - totalConsumeJade)
+      };
+    }
+    
+    function calcPeriodProfit(startDate, endDate, accountId = 'all') {
+      let records = accountId === 'all' 
+        ? gameData.profitHistory 
+        : gameData.profitHistory.filter(p => p.accountId === accountId);
+      
+      return records.filter(r => {
+        const d = new Date(r.date);
+        return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59');
+      }).reduce((sum, r) => sum + r.netProfit, 0);
+    }
+    
+    function getToday() { return new Date().toISOString().split('T')[0]; }
+    function getWeekStart() {
+      const d = new Date();
+      const day = d.getDay() || 7;
+      d.setDate(d.getDate() - day + 1);
+      return d.toISOString().split('T')[0];
+    }
+    function getMonthStart() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+    }
+    function getYearStart() {
+      const d = new Date();
+      return `${d.getFullYear()}-01-01`;
+    }
+    
+    function getNowTime() {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+      if (tabId === 'history') { 
+        renderPriceChart(); 
+        renderProfitChart(); 
+        renderRateChart();
+        renderAccountCompareChart();
+      }
+      if (tabId === 'report') initReportDates();
+    }
+    
+    function formatDate(date) {
+      const d = new Date(date);
+      return `${d.getMonth()+1}/${d.getDate()}`;
+    }
+    
+    const ACCOUNT_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#ec4899'];
+    
+    function renderAll() {
+      const r = gameData.exchangeRate;
+      const a = getActualRates();
+      const summary = calcAllAccounts();
+      
+      const todayProfit = calcPeriodProfit(getToday(), getToday());
+      const weekProfit = calcPeriodProfit(getWeekStart(), getToday());
+      const monthProfit = calcPeriodProfit(getMonthStart(), getToday());
+      const yearProfit = calcPeriodProfit(getYearStart(), getToday());
+      
+      document.getElementById('realizedProfit').textContent = gameData.realizedProfit.toFixed(2);
+      document.getElementById('todayProfit').textContent = todayProfit.toFixed(2);
+      document.getElementById('weekProfit').textContent = weekProfit.toFixed(2);
+      document.getElementById('monthProfit').textContent = monthProfit.toFixed(2);
+      document.getElementById('yearProfit').textContent = yearProfit.toFixed(2);
+      
+      document.getElementById('totalGrossProfit').textContent = summary.grossProfit.toFixed(2);
+      document.getElementById('totalConsumeCost').textContent = summary.consumeCost.toFixed(2);
+      document.getElementById('totalNetProfit').textContent = summary.netProfit.toFixed(2);
+      document.getElementById('totalJade').textContent = summary.totalJade.toFixed(2);
+      document.getElementById('totalGem').textContent = summary.totalGem.toFixed(4);
+      document.getElementById('monthEstimate').textContent = (summary.netProfit * 30).toFixed(0);
+      
+      document.getElementById('rateDisplay').innerHTML = `
+        <div class="rate-item"><div class="rate-label">玉石→宝石</div><div class="rate-value">1:${a.jadeToGem.toFixed(6)}</div><div class="rate-note">原价:${r.jadeToGem}</div></div>
+        <div class="rate-item"><div class="rate-label">宝石→人民币</div><div class="rate-value">¥${r.gemToRmb}</div></div>
+        <div class="rate-item"><div class="rate-label">手续费</div><div class="rate-value">${(r.feeRate*100).toFixed(0)}%</div></div>
+        <div class="rate-item"><div class="rate-label">玉石→人民币</div><div class="rate-value">¥${(a.jadeToGem*r.gemToRmb).toFixed(6)}</div></div>
+      `;
+      
+      document.getElementById('accountSummary').innerHTML = gameData.accounts.map((acc, idx) => {
+        initAccountData(acc);
+        const itemJade = calcAccountItemJade(acc);
+        const canJade = calcAccountCanJade(acc);
+        const consumeJade = calcAccountConsumeJade(acc);
+        const netJade = calcAccountNetJade(acc);
+        return `
+          <div class="account-summary-item" style="border-left:3px solid ${ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}">
+            <h4><span style="color:${ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}">●</span> ${acc.name}</h4>
+            <div class="detail">道具收益: <span class="value">${itemJade.toFixed(2)}玉石</span></div>
+            <div class="detail">罐头收益: <span class="value">${canJade.toFixed(2)}玉石</span></div>
+            <div class="detail">消耗成本: <span class="value danger">-${consumeJade.toFixed(2)}玉石</span></div>
+            <div class="detail">净收益: <span class="value">¥${jadeToRmb(netJade).toFixed(2)}</span></div>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('overviewTable').innerHTML = gameData.accounts.map((acc, idx) => {
+        initAccountData(acc);
+        const itemJade = calcAccountItemJade(acc);
+        const canJade = calcAccountCanJade(acc);
+        const consumeJade = calcAccountConsumeJade(acc);
+        const netJade = calcAccountNetJade(acc);
+        return `
+          <tr>
+            <td style="color:${ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]}">${acc.name}</td>
+            <td>${itemJade.toFixed(2)}</td>
+            <td>${acc.dailyData.petCan || 0}</td>
+            <td>${canJade.toFixed(2)}</td>
+            <td class="danger">${acc.dailyData.canConsume || 0}</td>
+            <td class="danger">${consumeJade.toFixed(2)}</td>
+            <td class="highlight">${netJade.toFixed(2)}</td>
+            <td class="highlight">¥${jadeToRmb(netJade).toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      renderAccountTabs();
+      renderAccountDetail();
+      
+      document.getElementById('itemsTable').innerHTML = gameData.items.map(item => `
+        <tr>
+          <td><b>${item.name}</b></td>
+          <td><input type="number" value="${item.price}" step="0.01" onchange="if(!checkAdmin())return;updateItemPrice('${item.id}', this.value)" class="wide"></td>
+          <td><button class="delete-btn" onclick="if(!checkAdmin())return;deleteItem('${item.id}')">🗑️</button></td>
+        </tr>
+      `).join('');
+      
+      renderTodayPriceTimeline();
+      renderTodayRateTimeline();
+      
+      // 兑换率设置
+      document.getElementById('rateJadeToGem').value = r.jadeToGem;
+      document.getElementById('rateGemToRmb').value = r.gemToRmb;
+      document.getElementById('feeRate').value = r.feeRate * 100;
+      document.getElementById('actualJadeToGem').textContent = a.jadeToGem.toFixed(6);
+      document.getElementById('feeDisplay').textContent = (r.feeRate * 100).toFixed(0);
+      
+      document.getElementById('statAccounts').textContent = gameData.accounts.length;
+      document.getElementById('statItems').textContent = gameData.items.length;
+      document.getElementById('statPriceRecords').textContent = gameData.priceHistory.length;
+      document.getElementById('statRateRecords').textContent = gameData.rateHistory.length;
+      document.getElementById('statProfitRecords').textContent = gameData.profitHistory.length;
+      
+      const today = getToday();
+      document.getElementById('profitRecordDate').value = today;
+      
+      document.getElementById('priceChartItem').innerHTML = gameData.items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+      document.getElementById('profitChartAccount').innerHTML = `<option value="all">全部账号</option>` + 
+        gameData.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      document.getElementById('reportAccount').innerHTML = `<option value="all">全部账号</option>` + 
+        gameData.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      
+      renderPriceHistoryTable();
+      renderRateHistoryTable();
+      renderProfitHistoryTable();
+    }
+    
+    function renderTodayPriceTimeline() {
+      const today = getToday();
+      const todayRecords = gameData.priceHistory
+        .filter(p => p.date === today)
+        .sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+      
+      if (todayRecords.length === 0) {
+        document.getElementById('todayPriceTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">今日暂无价格记录</p>';
+        return;
+      }
+      
+      document.getElementById('todayPriceTimeline').innerHTML = todayRecords.map(p => `
+        <div class="price-timeline-item">
+          <span>${p.itemName}</span>
+          <span><span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span>
+        </div>
+      `).join('');
+    }
+    
+    function renderTodayRateTimeline() {
+      const today = getToday();
+      const todayRecords = gameData.rateHistory
+        .filter(p => p.date === today)
+        .sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+      
+      if (todayRecords.length === 0) {
+        document.getElementById('todayRateTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">今日暂无兑换率记录</p>';
+        return;
+      }
+      
+      document.getElementById('todayRateTimeline').innerHTML = todayRecords.map(p => `
+        <div class="price-timeline-item">
+          <span><span class="time-badge">${p.time || '--:--'}</span></span>
+          <span>玉石→宝石:${p.jadeToGem} | 宝石→¥:${p.gemToRmb} | 手续费:${(p.feeRate*100).toFixed(0)}%</span>
+        </div>
+      `).join('');
+    }
+    
+    function renderAccountTabs() {
+      document.getElementById('accountTabs').innerHTML = gameData.accounts.map((acc, idx) => `
+        <button class="account-tab ${acc.id === currentAccountId ? 'active' : ''}" 
+                onclick="selectAccount('${acc.id}')"
+                style="${acc.id === currentAccountId ? 'background:' + ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length] : ''}">
+          ${acc.name}
+        </button>
+      `).join('') + `<button class="account-tab" class="admin-only" onclick="showAddAccountModal()" style="background:rgba(16,185,129,0.2);color:#10b981;">➕</button>`;
+    }
+    
+    function renderAccountDetail() {
+      const account = gameData.accounts.find(a => a.id === currentAccountId);
+      if (!account) return;
+      initAccountData(account);
+      const idx = gameData.accounts.findIndex(a => a.id === currentAccountId);
+      
+      const itemJade = calcAccountItemJade(account);
+      const canJade = calcAccountCanJade(account);
+      const consumeJade = calcAccountConsumeJade(account);
+      const netJade = calcAccountNetJade(account);
+      
+      document.getElementById('accountDetail').innerHTML = `
+        <div class="card account-card account-${(idx % 4) + 1}">
+          <div class="card-title">📊 ${account.name} 数据</div>
+          <div class="profit-grid">
+            <div class="profit-item"><div class="profit-label">道具收益</div><div class="profit-value small">${itemJade.toFixed(2)}玉石</div></div>
+            <div class="profit-item"><div class="profit-label">罐头收益</div><div class="profit-value small">${canJade.toFixed(2)}玉石</div></div>
+            <div class="profit-item"><div class="profit-label">消耗成本</div><div class="profit-value small warning">-${consumeJade.toFixed(2)}玉石</div></div>
+            <div class="profit-item"><div class="profit-label">净收益</div><div class="profit-value small">¥${jadeToRmb(netJade).toFixed(2)}</div></div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">📦 道具每日产出</div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>道具</th><th>单价(玉石)</th><th>日产出</th><th>收益(玉石)</th></tr></thead>
+              <tbody>
+                ${gameData.items.map(item => {
+                  const output = account.dailyData.items[item.id] || 0;
+                  return `
+                    <tr>
+                      <td><b>${item.name}</b></td>
+                      <td>${item.price}</td>
+                      <td><input type="number" value="${output}" onchange="updateAccountItem('${account.id}', '${item.id}', this.value)"></td>
+                      <td class="highlight">${(item.price * output).toFixed(2)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">🥫 罐头相关</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>每日抓宠物获得罐头</label>
+              <input type="number" value="${account.dailyData.petCan || 0}" onchange="updateAccountData('${account.id}', 'petCan', this.value)">
+              <p style="font-size:10px;color:#64748b;margin-top:2px;">收益: ${(account.dailyData.petCan || 0) * getCanPrice()}玉石</p>
+            </div>
+            <div class="form-group">
+              <label>每日消耗罐头</label>
+              <input type="number" value="${account.dailyData.canConsume || 0}" onchange="updateAccountData('${account.id}', 'canConsume', this.value)">
+              <p style="font-size:10px;color:#64748b;margin-top:2px;">成本: ${(account.dailyData.canConsume || 0) * getCanPrice()}玉石</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="card-title" style="margin-bottom:0;">🗑️ 删除账号</div>
+            <button class="btn btn-danger btn-small" onclick="deleteAccount('${account.id}')">删除此账号</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function selectAccount(id) { currentAccountId = id; renderAll(); }
+    
+    function updateAccountItem(accountId, itemId, value) {
+      const account = gameData.accounts.find(a => a.id === accountId);
+      if (account) {
+        initAccountData(account);
+        account.dailyData.items[itemId] = parseFloat(value) || 0;
+        saveData(); renderAll();
+      }
+    }
+    
+    function updateAccountData(accountId, field, value) {
+      const account = gameData.accounts.find(a => a.id === accountId);
+      if (account) {
+        initAccountData(account);
+        account.dailyData[field] = parseFloat(value) || 0;
+        saveData(); renderAll();
+      }
+    }
+    
+    function updateItemPrice(id, value) {
+      const item = gameData.items.find(i => i.id === id);
+      if (item) { item.price = parseFloat(value) || 0; saveData(); renderAll(); }
+    }
+    
+    function updateRate(field, value) {
+      if (field === 'feeRate') gameData.exchangeRate[field] = (parseFloat(value) || 0) / 100;
+      else gameData.exchangeRate[field] = parseFloat(value) || 0;
+      saveData(); renderAll();
+    }
+    
+    function showAddAccountModal() { document.getElementById('addAccountModal').classList.add('show'); }
+    function hideAddAccountModal() { document.getElementById('addAccountModal').classList.remove('show'); }
+    
+    function addAccount() {
+      const name = document.getElementById('newAccountName').value.trim();
+      if (!name) return alert('请输入账号名称');
+      gameData.accounts.push({
+        id: Date.now().toString(),
+        name: name,
+        dailyData: { items: {}, canConsume: 0, petCan: 0 }
+      });
+      saveData(); renderAll(); hideAddAccountModal();
+      document.getElementById('newAccountName').value = '';
+    }
+    
+    function deleteAccount(id) {
+      if (gameData.accounts.length <= 1) return alert('至少保留一个账号');
+      if (confirm('确定删除此账号吗？')) {
+        gameData.accounts = gameData.accounts.filter(a => a.id !== id);
+        if (currentAccountId === id) currentAccountId = gameData.accounts[0].id;
+        saveData(); renderAll();
+      }
+    }
+    
+    function showAddItemModal() { document.getElementById('addItemModal').classList.add('show'); }
+    function hideAddItemModal() { document.getElementById('addItemModal').classList.remove('show'); }
+    
+    function addItem() {
+      const name = document.getElementById('newItemName').value.trim();
+      if (!name) return alert('请输入道具名称');
+      gameData.items.push({
+        id: Date.now().toString(),
+        name: name,
+        price: parseFloat(document.getElementById('newItemPrice').value) || 0
+      });
+      saveData(); renderAll(); hideAddItemModal();
+      document.getElementById('newItemName').value = '';
+      document.getElementById('newItemPrice').value = 0;
+    }
+    
+    function deleteItem(id) {
+      if (confirm('确定删除此道具吗？')) {
+        gameData.items = gameData.items.filter(i => i.id !== id);
+        saveData(); renderAll();
+      }
+    }
+    
+    // 保存价格记录（带时间戳）
+    function savePriceRecordWithTime() {
+      const today = getToday();
+      const time = getNowTime();
+      
+      gameData.items.forEach(item => {
+        const record = {
+          id: Date.now().toString() + item.id + Math.random().toString(36).substr(2, 5),
+          date: today,
+          time: time,
+          itemName: item.name,
+          price: item.price
+        };
+        gameData.priceHistory.push(record);
+      });
+      saveData(); renderAll();
+      alert(`价格已保存！时间: ${today} ${time}`);
+    }
+    
+    // 保存兑换率记录（带时间戳）
+    function saveRateRecordWithTime() {
+      const today = getToday();
+      const time = getNowTime();
+      const r = gameData.exchangeRate;
+      
+      const record = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        date: today,
+        time: time,
+        jadeToGem: r.jadeToGem,
+        gemToRmb: r.gemToRmb,
+        feeRate: r.feeRate
+      };
+      gameData.rateHistory.push(record);
+      saveData(); renderAll();
+      alert(`兑换率已保存！时间: ${today} ${time}`);
+    }
+    
+    function saveProfitRecord() {
+      const date = document.getElementById('profitRecordDate').value;
+      if (!date) return alert('请选择日期');
+      
+      gameData.accounts.forEach(acc => {
+        initAccountData(acc);
+        const existing = gameData.profitHistory.find(p => p.date === date && p.accountId === acc.id);
+        
+        const itemDetails = gameData.items.map(item => {
+          const output = acc.dailyData.items[item.id] || 0;
+          return output > 0 ? `${item.name}${output}` : null;
+        }).filter(Boolean).join(',');
+        
+        const record = {
+          id: existing ? existing.id : Date.now().toString() + acc.id,
+          date: date,
+          accountId: acc.id,
+          accountName: acc.name,
+          grossProfit: jadeToRmb(calcAccountTotalJade(acc)),
+          consumeCost: jadeToRmb(calcAccountConsumeJade(acc)),
+          netProfit: jadeToRmb(calcAccountNetJade(acc)),
+          itemDetails: itemDetails,
+          petCan: acc.dailyData.petCan || 0,
+          canConsume: acc.dailyData.canConsume || 0,
+          items: JSON.parse(JSON.stringify(acc.dailyData.items || {})),
+          rates: JSON.parse(JSON.stringify(gameData.exchangeRate))
+        };
+        if (existing) Object.assign(existing, record);
+        else gameData.profitHistory.push(record);
+      });
+      
+      gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0);
+      saveData(); renderAll();
+      alert('收益记录已保存！');
+    }
+    
+    function renderPriceHistoryTable() {
+      const sorted = [...gameData.priceHistory].sort((a, b) => {
+        const dateCompare = new Date(b.date) - new Date(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return (b.time || '').localeCompare(a.time || '');
+      });
+      document.getElementById('priceHistoryTable').innerHTML = sorted.slice(0, 50).map(p => `
+        <tr>
+          <td>${p.date}</td>
+          <td><span class="time-badge">${p.time || '--:--'}</span></td>
+          <td>${p.itemName}</td>
+          <td>${p.price}</td>
+          <td><button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="color:#64748b">暂无记录</td></tr>';
+    }
+    
+    function renderRateHistoryTable() {
+      const sorted = [...gameData.rateHistory].sort((a, b) => {
+        const dateCompare = new Date(b.date) - new Date(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return (b.time || '').localeCompare(a.time || '');
+      });
+      document.getElementById('rateHistoryTable').innerHTML = sorted.slice(0, 50).map(p => `
+        <tr>
+          <td>${p.date}</td>
+          <td><span class="time-badge">${p.time || '--:--'}</span></td>
+          <td>${p.jadeToGem}</td>
+          <td>${p.gemToRmb}</td>
+          <td>${(p.feeRate * 100).toFixed(0)}%</td>
+          <td><button class="delete-btn" onclick="deleteRateRecord('${p.id}')">🗑️</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="color:#64748b">暂无记录</td></tr>';
+    }
+    
+    function renderProfitHistoryTable() {
+      const sorted = [...gameData.profitHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+      document.getElementById('profitHistoryTable').innerHTML = sorted.slice(0, 50).map(p => `
+        <tr>
+          <td>${p.date}</td>
+          <td>${p.accountName}</td>
+          <td style="font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;">${p.itemDetails || '-'}</td>
+          <td class="highlight">¥${p.grossProfit.toFixed(2)}</td>
+          <td class="danger">¥${p.consumeCost.toFixed(2)}</td>
+          <td class="highlight">¥${p.netProfit.toFixed(2)}</td>
+          <td><button class="delete-btn" onclick="deleteProfitRecord('${p.id}')">🗑️</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" style="color:#64748b">暂无记录</td></tr>';
+    }
+    
+    function renderPriceChart() {
+      const itemName = document.getElementById('priceChartItem').value;
+      const mode = document.getElementById('priceChartMode').value;
+      const today = getToday();
+      
+      let records = gameData.priceHistory.filter(p => p.itemName === itemName);
+      
+      if (mode === 'today') {
+        records = records.filter(p => p.date === today);
+        records.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+      } else {
+        records.sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+      
+      if (priceChart) priceChart.destroy();
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      
+      const labels = mode === 'today' 
+        ? records.map(p => p.time || '--:--')
+        : records.map(p => formatDate(p.date));
+      
+      priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: itemName + ' 价格（玉石）',
+            data: records.map(p => p.price),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true, tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+    
+    function renderRateChart() {
+      const type = document.getElementById('rateChartType').value;
+      const mode = document.getElementById('rateChartMode').value;
+      const today = getToday();
+      
+      let records = [...gameData.rateHistory];
+      
+      if (mode === 'today') {
+        records = records.filter(p => p.date === today);
+        records.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+      } else {
+        records.sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+      
+      if (rateChart) rateChart.destroy();
+      const ctx = document.getElementById('rateChart').getContext('2d');
+      
+      const labels = mode === 'today' 
+        ? records.map(p => p.time || '--:--')
+        : records.map(p => formatDate(p.date));
+      
+      const dataKey = type === 'jadeToGem' ? 'jadeToGem' : 'gemToRmb';
+      const label = type === 'jadeToGem' ? '玉石→宝石' : '宝石→人民币';
+      
+      rateChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: label,
+            data: records.map(p => p[dataKey]),
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            fill: true, tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+    
+    function renderProfitChart() {
+      const accountId = document.getElementById('profitChartAccount').value;
+      let records = accountId === 'all' 
+        ? [...gameData.profitHistory] 
+        : gameData.profitHistory.filter(p => p.accountId === accountId);
+      
+      if (accountId === 'all') {
+        const grouped = {};
+        records.forEach(r => {
+          if (!grouped[r.date]) grouped[r.date] = { grossProfit: 0, consumeCost: 0, netProfit: 0 };
+          grouped[r.date].grossProfit += r.grossProfit;
+          grouped[r.date].consumeCost += r.consumeCost;
+          grouped[r.date].netProfit += r.netProfit;
+        });
+        records = Object.entries(grouped).map(([date, data]) => ({ date, ...data }));
+      }
+      records.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      if (profitChart) profitChart.destroy();
+      const ctx = document.getElementById('profitChart').getContext('2d');
+      profitChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: records.map(p => formatDate(p.date)),
+          datasets: [
+            {
+              label: '总收益（¥）',
+              data: records.map(p => p.grossProfit),
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: false, tension: 0.3
+            },
+            {
+              label: '净利润（¥）',
+              data: records.map(p => p.netProfit),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              fill: true, tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+    
+    function renderAccountCompareChart() {
+      // 按日期和账号分组
+      const grouped = {};
+      gameData.profitHistory.forEach(r => {
+        if (!grouped[r.date]) grouped[r.date] = {};
+        if (!grouped[r.date][r.accountName]) grouped[r.date][r.accountName] = 0;
+        grouped[r.date][r.accountName] += r.netProfit;
+      });
+      
+      const dates = Object.keys(grouped).sort();
+      const accountNames = [...new Set(gameData.profitHistory.map(r => r.accountName))];
+      
+      if (accountCompareChart) accountCompareChart.destroy();
+      const ctx = document.getElementById('accountCompareChart').getContext('2d');
+      
+      accountCompareChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates.map(d => formatDate(d)),
+          datasets: accountNames.map((name, idx) => ({
+            label: name,
+            data: dates.map(d => grouped[d][name] || 0),
+            backgroundColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length],
+          }))
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' }, stacked: false },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' }, stacked: false }
+          }
+        }
+      });
+    }
+    
+    function deletePriceRecord(id) {
+      gameData.priceHistory = gameData.priceHistory.filter(p => p.id !== id);
+      saveData(); renderAll(); renderPriceChart();
+    }
+    
+    function deleteRateRecord(id) {
+      gameData.rateHistory = gameData.rateHistory.filter(p => p.id !== id);
+      saveData(); renderAll(); renderRateChart();
+    }
+    
+    function deleteProfitRecord(id) {
+      gameData.profitHistory = gameData.profitHistory.filter(p => p.id !== id);
+      gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0);
+      saveData(); renderAll(); renderProfitChart();
+    }
+    
+    // 报表功能
+    function initReportDates() {
+      const today = getToday();
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      document.getElementById('reportStartDate').value = monthAgo.toISOString().split('T')[0];
+      document.getElementById('reportEndDate').value = today;
+    }
+    
+    function generateReport(type) {
+      const startDate = document.getElementById('reportStartDate').value;
+      const endDate = document.getElementById('reportEndDate').value;
+      const accountId = document.getElementById('reportAccount').value;
+      
+      if (!startDate || !endDate) return alert('请选择日期范围');
+      
+      let report = '';
+      const now = new Date().toLocaleString('zh-CN');
+      
+      report += '═══════════════════════════════════════════════════\n';
+      report += '              游戏收益报表\n';
+      report += '═══════════════════════════════════════════════════\n';
+      report += `生成时间: ${now}\n`;
+      report += `统计周期: ${startDate} 至 ${endDate}\n`;
+      report += `统计账号: ${accountId === 'all' ? '全部账号' : gameData.accounts.find(a => a.id === accountId)?.name}\n`;
+      report += '───────────────────────────────────────────────────\n\n';
+      
+      // 收益记录
+      if (type === 'all' || type === 'profit') {
+        let profitRecords = accountId === 'all' 
+          ? gameData.profitHistory 
+          : gameData.profitHistory.filter(p => p.accountId === accountId);
+        profitRecords = profitRecords.filter(r => r.date >= startDate && r.date <= endDate);
+        profitRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const groupedByDate = {};
+        profitRecords.forEach(r => {
+          if (!groupedByDate[r.date]) groupedByDate[r.date] = [];
+          groupedByDate[r.date].push(r);
+        });
+        
+        report += '【收益记录】\n';
+        report += '───────────────────────────────────────────────────\n';
+        
+        Object.keys(groupedByDate).sort().forEach(date => {
+          report += `日期: ${date}\n`;
+          groupedByDate[date].forEach(r => {
+            let parts = [];
+            gameData.items.forEach(item => {
+              const output = r.items?.[item.id] || 0;
+              if (output > 0) parts.push(`${item.name}${output}`);
+            });
+            if (r.petCan > 0) parts.push(`抓宠罐头${r.petCan}`);
+            if (r.canConsume > 0) parts.push(`消耗罐头${r.canConsume}`);
+            
+            report += `${r.accountName}: ${parts.join(',')}\n`;
+          });
+          report += '\n';
+        });
+        
+        const totalGross = profitRecords.reduce((s, r) => s + r.grossProfit, 0);
+        const totalConsume = profitRecords.reduce((s, r) => s + r.consumeCost, 0);
+        const totalNet = profitRecords.reduce((s, r) => s + r.netProfit, 0);
+        
+        report += '【收益汇总】\n';
+        report += '───────────────────────────────────────────────────\n';
+        report += `总收益: ¥${totalGross.toFixed(2)}\n`;
+        report += `消耗成本: ¥${totalConsume.toFixed(2)}\n`;
+        report += `净利润: ¥${totalNet.toFixed(2)}\n`;
+        report += `记录天数: ${Object.keys(groupedByDate).length}天\n\n`;
+      }
+      
+      // 价格记录
+      if (type === 'all' || type === 'price') {
+        let priceRecords = gameData.priceHistory.filter(p => p.date >= startDate && p.date <= endDate);
+        priceRecords.sort((a, b) => {
+          const dateCompare = new Date(a.date) - new Date(b.date);
+          if (dateCompare !== 0) return dateCompare;
+          return (a.time || '').localeCompare(b.time || '');
+        });
+        
+        const groupedByDateTime = {};
+        priceRecords.forEach(r => {
+          const key = r.time ? `${r.date} ${r.time}` : r.date;
+          if (!groupedByDateTime[key]) groupedByDateTime[key] = { date: r.date, time: r.time, items: [] };
+          groupedByDateTime[key].items.push(r);
+        });
+        
+        report += '【道具价格记录】\n';
+        report += '───────────────────────────────────────────────────\n';
+        
+        Object.keys(groupedByDateTime).sort().forEach(key => {
+          const group = groupedByDateTime[key];
+          const priceStr = group.items.map(p => `${p.itemName}${p.price}`).join(',');
+          if (group.time) {
+            report += `价格 ${group.time}: ${priceStr}\n`;
+          } else {
+            report += `价格: ${priceStr}\n`;
+          }
+        });
+        report += '\n';
+      }
+      
+      // 兑换率记录
+      if (type === 'all' || type === 'rate') {
+        let rateRecords = gameData.rateHistory.filter(p => p.date >= startDate && p.date <= endDate);
+        rateRecords.sort((a, b) => {
+          const dateCompare = new Date(a.date) - new Date(b.date);
+          if (dateCompare !== 0) return dateCompare;
+          return (a.time || '').localeCompare(b.time || '');
+        });
+        
+        report += '【兑换率记录】\n';
+        report += '───────────────────────────────────────────────────\n';
+        
+        rateRecords.forEach(r => {
+          const timeStr = r.time ? ` ${r.time}` : '';
+          report += `兑换率${timeStr}: 玉石换宝石${r.jadeToGem},宝石换人民币${r.gemToRmb},手续费${(r.feeRate*100).toFixed(0)}\n`;
+        });
+        report += '\n';
+      }
+      
+      report += '═══════════════════════════════════════════════════\n';
+      report += '              报表结束\n';
+      report += '═══════════════════════════════════════════════════\n';
+      
+      currentReport = report;
+      document.getElementById('reportPreview').textContent = report;
+    }
+    
+    function copyReport() {
+      if (!currentReport) return alert('请先生成报表');
+      navigator.clipboard.writeText(currentReport).then(() => alert('已复制到剪贴板！'));
+    }
+    
+    function downloadReport() {
+      if (!currentReport) return alert('请先生成报表');
+      const blob = new Blob([currentReport], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `游戏收益报表_${getToday()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    // 导入功能
+    function parseAndImport() {
+      const text = document.getElementById('importText').value.trim();
+      if (!text) return alert('请输入数据');
+      
+      let result = { dates: 0, records: 0, prices: 0, rates: 0 };
+      let currentDate = '';
+      const lines = text.split('\n');
+      
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        
+        // 识别日期
+        const dateMatch = line.match(/日期[：:]\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})/);
+        if (dateMatch) {
+          currentDate = dateMatch[1].replace(/\//g, '-');
+          result.dates++;
+          return;
+        }
+        
+        // 识别兑换率（支持带时间）
+        const rateTimeMatch = line.match(/兑换率\s+(\d{1,2}:\d{2})[：:]\s*(.+)/);
+        const rateMatch = line.match(/兑换率[：:]\s*(.+)/);
+        
+        if (rateTimeMatch) {
+          const time = rateTimeMatch[1];
+          const dataStr = rateTimeMatch[2];
+          const date = currentDate || getToday();
+          parseRateLine(dataStr, date, time);
+          result.rates++;
+          return;
+        }
+        
+        if (rateMatch) {
+          const time = getNowTime();
+          const dataStr = rateMatch[1];
+          const date = currentDate || getToday();
+          parseRateLine(dataStr, date, time);
+          result.rates++;
+          return;
+        }
+        
+        // 识别价格（支持带时间）
+        const priceTimeMatch = line.match(/价格\s+(\d{1,2}:\d{2})[：:]\s*(.+)/);
+        const priceMatch = line.match(/价格[：:]\s*(.+)/);
+        
+        if (priceTimeMatch) {
+          const time = priceTimeMatch[1];
+          const items = priceTimeMatch[2].split(/[,，]/);
+          const date = currentDate || getToday();
+          items.forEach(item => {
+            const match = item.trim().match(/(.+?)(\d+\.?\d*)$/);
+            if (match) {
+              const name = match[1].trim();
+              const price = parseFloat(match[2]);
+              updateItemAndHistory(name, price, date, time);
+              result.prices++;
+            }
+          });
+          return;
+        }
+        
+        if (priceMatch) {
+          const time = getNowTime();
+          const items = priceMatch[1].split(/[,，]/);
+          const date = currentDate || getToday();
+          items.forEach(item => {
+            const match = item.trim().match(/(.+?)(\d+\.?\d*)$/);
+            if (match) {
+              const name = match[1].trim();
+              const price = parseFloat(match[2]);
+              updateItemAndHistory(name, price, date, time);
+              result.prices++;
+            }
+          });
+          return;
+        }
+        
+        // 识别账号数据
+        const accountMatch = line.match(/(.+?)[：:]\s*(.+)/);
+        if (accountMatch && currentDate) {
+          const accountName = accountMatch[1].trim();
+          const dataStr = accountMatch[2];
+          
+          let account = gameData.accounts.find(a => a.name === accountName);
+          if (!account) {
+            account = { id: Date.now().toString(), name: accountName, dailyData: { items: {}, canConsume: 0, petCan: 0 } };
+            gameData.accounts.push(account);
+          }
+          initAccountData(account);
+          
+          const items = dataStr.split(/[,，]/);
+          items.forEach(item => {
+            const match = item.trim().match(/(.+?)(\d+\.?\d*)$/);
+            if (match) {
+              const name = match[1].trim();
+              const value = parseFloat(match[2]);
+              
+              if (name === '抓宠罐头' || name === '获得罐头') {
+                account.dailyData.petCan = value;
+              } else if (name === '消耗罐头') {
+                account.dailyData.canConsume = value;
+              } else {
+                const itemDef = gameData.items.find(i => i.name === name);
+                if (itemDef) {
+                  account.dailyData.items[itemDef.id] = value;
+                }
+              }
+            }
+          });
+          
+          const existing = gameData.profitHistory.find(p => p.date === currentDate && p.accountId === account.id);
+          const itemDetails = gameData.items.map(item => {
+            const output = account.dailyData.items[item.id] || 0;
+            return output > 0 ? `${item.name}${output}` : null;
+          }).filter(Boolean).join(',');
+          
+          const record = {
+            id: existing ? existing.id : Date.now().toString() + Math.random(),
+            date: currentDate,
+            accountId: account.id,
+            accountName: account.name,
+            grossProfit: jadeToRmb(calcAccountTotalJade(account)),
+            consumeCost: jadeToRmb(calcAccountConsumeJade(account)),
+            netProfit: jadeToRmb(calcAccountNetJade(account)),
+            itemDetails: itemDetails,
+            petCan: account.dailyData.petCan || 0,
+            canConsume: account.dailyData.canConsume || 0,
+            items: JSON.parse(JSON.stringify(account.dailyData.items || {})),
+            rates: JSON.parse(JSON.stringify(gameData.exchangeRate))
+          };
+          if (existing) Object.assign(existing, record);
+          else gameData.profitHistory.push(record);
+          result.records++;
+        }
+      });
+      
+      gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0);
+      saveData(); renderAll();
+      
+      document.getElementById('importResult').innerHTML = `
+        <div class="card" style="margin-top:10px;">
+          <div class="card-title">✅ 导入结果</div>
+          <p style="font-size:12px;color:#10b981;">识别日期: ${result.dates}个</p>
+          <p style="font-size:12px;color:#10b981;">导入收益记录: ${result.records}条</p>
+          <p style="font-size:12px;color:#10b981;">更新道具价格: ${result.prices}个</p>
+          <p style="font-size:12px;color:#10b981;">更新兑换率: ${result.rates}次</p>
+        </div>
+      `;
+    }
+    
+    function parseRateLine(dataStr, date, time) {
+      const items = dataStr.split(/[,，]/);
+      items.forEach(item => {
+        const match = item.trim().match(/(.+?)(\d+\.?\d*)$/);
+        if (match) {
+          const name = match[1].trim();
+          const value = parseFloat(match[2]);
+          
+          if (name === '玉石换宝石') {
+            gameData.exchangeRate.jadeToGem = value;
+          } else if (name === '宝石换人民币') {
+            gameData.exchangeRate.gemToRmb = value;
+          } else if (name === '手续费') {
+            gameData.exchangeRate.feeRate = value / 100;
+          }
+        }
+      });
+      
+      // 保存兑换率历史
+      const existing = gameData.rateHistory.find(r => r.date === date && r.time === time);
+      if (!existing) {
+        gameData.rateHistory.push({
+          id: Date.now().toString() + Math.random(),
+          date: date,
+          time: time,
+          jadeToGem: gameData.exchangeRate.jadeToGem,
+          gemToRmb: gameData.exchangeRate.gemToRmb,
+          feeRate: gameData.exchangeRate.feeRate
+        });
+      }
+    }
+    
+    function updateItemAndHistory(name, price, date, time) {
+      const existingItem = gameData.items.find(i => i.name === name);
+      if (existingItem) {
+        existingItem.price = price;
+      } else {
+        gameData.items.push({ id: Date.now().toString() + Math.random(), name, price });
+      }
+      
+      const existing = gameData.priceHistory.find(p => p.date === date && p.time === time && p.itemName === name);
+      if (existing) {
+        existing.price = price;
+      } else {
+        gameData.priceHistory.push({
+          id: Date.now().toString() + Math.random(),
+          date: date,
+          time: time,
+          itemName: name,
+          price: price
+        });
+      }
+    }
+    
+    function exportData() {
+      const blob = new Blob([JSON.stringify(gameData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `游戏收益数据_${getToday()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (confirm('确定导入数据吗？当前数据将被覆盖。')) {
+            gameData = imported;
+            gameData.accounts.forEach(a => initAccountData(a));
+            if (gameData.realizedProfit === undefined) gameData.realizedProfit = 0;
+            if (!gameData.rateHistory) gameData.rateHistory = [];
+            saveData(); renderAll();
+            alert('导入成功！');
+          }
+        } catch (err) { alert('导入失败：文件格式错误'); }
+      };
+      reader.readAsText(file);
+    }
+    
+    async function resetAllData() {
+      if (!checkAdmin()) return;
+      if (confirm('确定要重置所有数据吗？此操作不可恢复！')) {
+        try {
+          await fetch('/api/data', { method: 'DELETE' });
+          gameData = await loadData();
+          renderAll();
+          alert('数据已重置！');
+        } catch (e) {
+          console.error('重置失败:', e);
+          alert('重置失败，请重试');
+        }
+      }
+    }
+    
+    // 页面初始化
+    async function init() {
+      if (checkLogin()) {
+        gameData = await loadData();
+        currentAccountId = gameData.accounts[0]?.id || '1';
+        renderAll();
+        initReportDates();
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
