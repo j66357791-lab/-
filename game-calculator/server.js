@@ -1,242 +1,157 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 管理员账号配置
+const ADMIN_ACCOUNT = '18679012034';
+const ADMIN_PASSWORD = '628727';
+
 // 中间件
-app.use(express.json({ limit: '50mb' }));
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// MongoDB连接
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/game-calculator';
-
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB连接成功'))
-  .catch(err => console.error('MongoDB连接失败:', err));
-
-// 用户Schema
-const userSchema = new mongoose.Schema({
-  account: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'user' },
-  createdAt: { type: Date, default: Date.now }
-});
-
-// 用户数据Schema
-const userDataSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  dataKey: { type: String, default: 'main' },
-  dataValue: { type: Object, default: {} },
-  updatedAt: { type: Date, default: Date.now }
-});
-
-// 复合唯一索引
-userDataSchema.index({ userId: 1, dataKey: 1 }, { unique: true });
-
-const User = mongoose.model('User', userSchema);
-const UserData = mongoose.model('UserData', userDataSchema);
-
-// 初始化管理员账号
-async function initAdmin() {
-  try {
-    const existingAdmin = await User.findOne({ account: '18679012034' });
-    if (!existingAdmin) {
-      const hashedPassword = bcrypt.hashSync('628727', 10);
-      await User.create({
-        account: '18679012034',
-        password: hashedPassword,
-        role: 'admin'
-      });
-      console.log('管理员账号已创建');
-    }
-  } catch (err) {
-    console.error('初始化管理员失败:', err);
-  }
+// MongoDB 连接
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('❌ 请设置 MONGODB_URI 环境变量');
+  process.exit(1);
 }
 
-mongoose.connection.once('open', initAdmin);
+// 定义数据模型 (恢复为 GameData)
+const GameDataSchema = new mongoose.Schema({
+  key: { type: String, default: 'gameData', unique: true },
+  data: { type: Object, default: {} },
+  updatedAt: { type: Date, default: Date.now }
+});
+const GameData = mongoose.model('GameData', GameDataSchema);
 
-// 登录接口
-app.post('/api/login', async (req, res) => {
-  try {
-    const { account, password } = req.body;
-    
-    const user = await User.findOne({ account });
-    if (!user) {
-      return res.status(401).json({ success: false, message: '账号或密码错误' });
-    }
-    
-    const isValid = bcrypt.compareSync(password, user.password);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: '账号或密码错误' });
-    }
-    
-    res.json({ 
-      success: true, 
-      isAdmin: user.role === 'admin',
-      userId: user._id.toString(),
-      account: user.account
-    });
-  } catch (err) {
-    console.error('登录错误:', err);
-    res.status(500).json({ success: false, message: '服务器错误' });
+// 连接 MongoDB
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ MongoDB 连接成功'))
+  .catch(err => {
+    console.error('❌ MongoDB 连接失败:', err.message);
+    process.exit(1);
+  });
+
+// 管理员登录接口
+app.post('/api/login', (req, res) => {
+  const { account, password } = req.body;
+  if (account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD) {
+    res.json({ success: true, message: '登录成功', isAdmin: true });
+  } else {
+    res.json({ success: false, message: '账号或密码错误' });
   }
 });
 
-// 获取用户数据
+// 获取数据
 app.get('/api/data', async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(400).json({ success: false, message: '缺少用户ID' });
+    let doc = await GameData.findOne({ key: 'gameData' });
+    if (!doc) {
+      // 如果没有数据，创建默认数据（通常不会执行这一步，因为您已有数据）
+      const defaultData = {
+        exchangeRate: { jadeToGem: 0.012, gemToRmb: 1.35, feeRate: 0.1 },
+        items: [
+          { id: '1', name: '进阶石', price: 8.5 },
+          { id: '2', name: '贝壳', price: 1.35 },
+          { id: '3', name: '罐头', price: 1.28 },
+          { id: '4', name: '玉石', price: 1 }
+        ],
+        accounts: [
+          { id: '1', name: '账号一', dailyData: {} },
+          { id: '2', name: '账号二', dailyData: {} },
+          { id: '3', name: '账号三', dailyData: {} },
+          { id: '4', name: '账号四', dailyData: {} }
+        ],
+        priceHistory: [],
+        rateHistory: [],
+        profitHistory: [],
+        realizedProfit: 0
+      };
+      doc = await GameData.create({ key: 'gameData', data: defaultData });
     }
-    
-    const userData = await UserData.findOne({ userId, dataKey: 'main' });
-    res.json({ success: true, data: userData ? userData.dataValue : null });
-  } catch (err) {
-    console.error('获取数据错误:', err);
-    res.status(500).json({ success: false, message: '服务器错误' });
+    res.json({ success: true, data: doc.data });
+  } catch (error) {
+    console.error('获取数据失败:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 保存用户数据
+// 保存数据
 app.post('/api/data', async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
     const { data } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, message: '缺少用户ID' });
+    if (!data) {
+      return res.status(400).json({ success: false, error: '缺少数据' });
     }
-    
-    await UserData.findOneAndUpdate(
-      { userId, dataKey: 'main' },
-      { dataValue: data, updatedAt: new Date() },
+    const doc = await GameData.findOneAndUpdate(
+      { key: 'gameData' },
+      { data, updatedAt: new Date() },
       { upsert: true, new: true }
     );
-    
-    res.json({ success: true, message: '保存成功' });
-  } catch (err) {
-    console.error('保存数据错误:', err);
-    res.status(500).json({ success: false, message: '保存失败' });
+    res.json({ success: true, message: '保存成功', updatedAt: doc.updatedAt });
+  } catch (error) {
+    console.error('保存数据失败:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 删除用户数据（重置）
+// 重置数据
 app.delete('/api/data', async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, message: '缺少用户ID' });
-    }
-    
-    await UserData.deleteOne({ userId, dataKey: 'main' });
-    res.json({ success: true, message: '重置成功' });
-  } catch (err) {
-    console.error('重置数据错误:', err);
-    res.status(500).json({ success: false, message: '重置失败' });
+    const defaultData = {
+      exchangeRate: { jadeToGem: 0.012, gemToRmb: 1.35, feeRate: 0.1 },
+      items: [
+        { id: '1', name: '进阶石', price: 8.5 },
+        { id: '2', name: '贝壳', price: 1.35 },
+        { id: '3', name: '罐头', price: 1.28 },
+        { id: '4', name: '玉石', price: 1 }
+      ],
+      accounts: [
+        { id: '1', name: '账号一', dailyData: {} },
+        { id: '2', name: '账号二', dailyData: {} },
+        { id: '3', name: '账号三', dailyData: {} },
+        { id: '4', name: '账号四', dailyData: {} }
+      ],
+      priceHistory: [],
+      rateHistory: [],
+      profitHistory: [],
+      realizedProfit: 0
+    };
+    await GameData.findOneAndUpdate(
+      { key: 'gameData' },
+      { data: defaultData, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, message: '数据已重置' });
+  } catch (error) {
+    console.error('重置数据失败:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ========== 管理员接口 ==========
-
-// 获取所有用户列表
-app.get('/api/admin/users', async (req, res) => {
-  try {
-    const users = await User.find({}, 'account role createdAt').sort({ _id: 1 });
-    res.json({ success: true, users });
-  } catch (err) {
-    console.error('获取用户列表错误:', err);
-    res.status(500).json({ success: false, message: '获取失败' });
-  }
+// 健康检查
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// 创建用户
-app.post('/api/admin/users', async (req, res) => {
-  try {
-    const { account, password, role } = req.body;
-    
-    if (!account || !password) {
-      return res.status(400).json({ success: false, message: '账号和密码不能为空' });
-    }
-    
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    
-    const user = await User.create({
-      account,
-      password: hashedPassword,
-      role: role || 'user'
-    });
-    
-    res.json({ success: true, userId: user._id.toString(), message: '创建成功' });
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({ success: false, message: '账号已存在' });
-    }
-    console.error('创建用户错误:', err);
-    res.status(500).json({ success: false, message: '创建失败' });
-  }
+// 所有其他请求返回 index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 修改用户密码
-app.put('/api/admin/users/:id/password', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { password } = req.body;
-    
-    if (!password) {
-      return res.status(400).json({ success: false, message: '密码不能为空' });
-    }
-    
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    
-    await User.findByIdAndUpdate(id, { password: hashedPassword });
-    res.json({ success: true, message: '密码已更新' });
-  } catch (err) {
-    console.error('修改密码错误:', err);
-    res.status(500).json({ success: false, message: '修改失败' });
-  }
-});
-
-// 删除用户
-app.delete('/api/admin/users/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // 不能删除管理员
-    const admin = await User.findOne({ account: '18679012034' });
-    if (admin && id === admin._id.toString()) {
-      return res.status(400).json({ success: false, message: '不能删除管理员账号' });
-    }
-    
-    await UserData.deleteMany({ userId: id });
-    await User.findByIdAndDelete(id);
-    
-    res.json({ success: true, message: '删除成功' });
-  } catch (err) {
-    console.error('删除用户错误:', err);
-    res.status(500).json({ success: false, message: '删除失败' });
-  }
-});
-
-// 重置用户数据
-app.post('/api/admin/users/:id/reset', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    await UserData.deleteOne({ userId: id, dataKey: 'main' });
-    res.json({ success: true, message: '用户数据已重置' });
-  } catch (err) {
-    console.error('重置用户数据错误:', err);
-    res.status(500).json({ success: false, message: '重置失败' });
-  }
-});
-
+// 启动服务器
 app.listen(PORT, () => {
-  console.log(`服务器运行在 http://localhost:${PORT}`);
+  console.log(`🚀 服务器运行在端口 ${PORT}`);
+  console.log(`📱 访问地址: http://localhost:${PORT}`);
 });
