@@ -105,7 +105,7 @@
     .import-hint { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 11px; color: #93c5fd; }
     .time-badge { display: inline-block; padding: 2px 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; font-size: 10px; color: #93c5fd; margin-left: 4px; }
     .price-timeline { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; margin-top: 10px; }
-    .price-timeline-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
+    .price-timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
     .price-timeline-item:last-child { border-bottom: none; }
     .rate-input-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
     .rate-input-row .form-group { margin-bottom: 0; flex: 1; }
@@ -424,8 +424,7 @@
         <div class="card-title">👥 用户管理</div>
         <div class="card-desc">管理员可以创建、修改、删除用户账号，每个用户拥有独立的数据空间</div>
         <div style="margin-bottom: 12px;">
-          <button class="btn btn-primary btn-small" onclick="showAddUserModal()" style="margin-top:10px;">
-          <button class="btn btn-primary btn-small">➕ 创建新用户</button>
+          <button class="btn btn-primary btn-small admin-only" onclick="showAddUserModal()" style="margin-top:10px;">➕ 创建新用户</button>
         </div>
       </div>
       <div class="card">
@@ -515,7 +514,6 @@
 let currentUser = null, isAdmin = false, currentUserId = null, gameData = null, currentAccountId = '1';
 let priceChart = null, profitChart = null, rateChart = null, petChart = null, accountValueChart = null, accountCompareChart = null, currentReport = '';
 
-// 北京时间
 function getToday() { const now = new Date(); const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000); return beijing.toISOString().split('T')[0]; }
 function getNowTime() { const now = new Date(); const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000); return `${String(beijing.getUTCHours()).padStart(2,'0')}:${String(beijing.getUTCMinutes()).padStart(2,'0')}`; }
 function getWeekStart() { const d = new Date(getToday()); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().split('T')[0]; }
@@ -525,18 +523,13 @@ function formatDate(date) { const d = new Date(date); return `${d.getMonth()+1}/
 
 const ACCOUNT_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#ec4899'];
 
-// API请求封装
 async function apiRequest(url, method = 'GET', data = null) {
-  const options = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'x-user-id': currentUserId || '1' }
-  };
+  const options = { method, headers: { 'Content-Type': 'application/json', 'x-user-id': currentUserId || '1' } };
   if (data) options.body = JSON.stringify(data);
   const res = await fetch(url, options);
   return await res.json();
 }
 
-// 登录
 async function doLogin() {
   const account = document.getElementById('loginAccount').value.trim();
   const password = document.getElementById('loginPassword').value;
@@ -588,7 +581,6 @@ function checkLogin() {
 
 function checkAdmin() { if (!isAdmin) { alert('此功能需要管理员权限！'); return false; } return true; }
 
-// 强制开启新的一天
 async function forceNewDay() {
   if (!checkAdmin()) return;
   const today = getToday();
@@ -623,7 +615,6 @@ function saveYesterdayData(yesterday) {
   gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0);
 }
 
-// 投入管理
 function addInvest() {
   const amount = parseFloat(document.getElementById('investAmount').value);
   if (!amount || amount <= 0) { alert('请输入有效的投入金额'); return; }
@@ -636,7 +627,6 @@ function addInvest() {
 
 function resetInvest() { if (!checkAdmin()) return; if (confirm('确定要重置投入记录吗？')) { gameData.investHistory = []; gameData.totalInvest = 0; saveData(); renderAll(); } }
 
-// 加权平均计算
 function calcWeightedAvgPrice(itemName) {
   const records = gameData.priceHistory.filter(p => p.itemName === itemName);
   if (records.length === 0) { const item = gameData.items.find(i => i.name === itemName); return item ? item.price : 0; }
@@ -679,7 +669,6 @@ function getWeightedCanPrice() { return calcWeightedAvgPrice('罐头') || 1.28; 
 function gemToRmb(gem) { const avgRate = calcWeightedAvgRate(); return gem * avgRate.gemToRmb; }
 function petGemToRmb(gem) { return gem * 0.95 * gameData.exchangeRate.gemToRmb; }
 
-// 数据持久化
 const DEFAULT_DATA = {
   exchangeRate: { jadeToGem: 0.012, gemToRmb: 1.35, feeRate: 0.1 },
   items: [{ id: '1', name: '进阶石', price: 8.5 }, { id: '2', name: '贝壳', price: 1.35 }, { id: '3', name: '罐头', price: 1.28 }, { id: '4', name: '玉石', price: 1 }],
@@ -735,14 +724,12 @@ function getActualRates() { const r = gameData.exchangeRate; return { jadeToGem:
 function jadeToRmb(jade) { const a = getActualRates(); return jade * a.jadeToGem * a.gemToRmb; }
 function jadeToGem(jade) { return jade * getActualRates().jadeToGem; }
 
-// 账号计算
 function calcAccountItemJade(account) { initAccountData(account); let total = 0; gameData.items.forEach(item => { const output = account.dailyData.items[item.id] || 0; const avgPrice = calcWeightedAvgPrice(item.name) || item.price; total += avgPrice * output; }); return total; }
 function calcAccountCanJade(account) { initAccountData(account); const avgCanPrice = getWeightedCanPrice(); return (account.dailyData.petCan || 0) * avgCanPrice; }
 function calcAccountConsumeJade(account) { initAccountData(account); const avgCanPrice = getWeightedCanPrice(); const canConsume = (account.dailyData.canConsume || 0) * avgCanPrice; const extraConsume = account.dailyData.extraConsume || 0; return canConsume + extraConsume; }
 function calcAccountTotalJade(account) { return calcAccountItemJade(account) + calcAccountCanJade(account); }
 function calcAccountNetJade(account) { return calcAccountTotalJade(account) - calcAccountConsumeJade(account); }
 
-// 宠物价值计算
 function calcAccountPetValue(account) {
   initAccountData(account);
   let totalGem = 0;
@@ -787,7 +774,6 @@ function switchTab(tabId) {
   if (tabId === 'users') loadUsers();
 }
 
-// 自动记录账号价值快照
 function saveAccountValueSnapshot() {
   const today = getToday();
   const time = getNowTime();
@@ -805,26 +791,18 @@ function saveAccountValueSnapshot() {
   saveData();
 }
 
-// ========== 用户管理 ==========
 async function loadUsers() {
   if (!isAdmin) return;
   try {
     const res = await fetch('/api/admin/users');
     const result = await res.json();
-    if (result.success) {
-      renderUserList(result.users);
-    }
-  } catch (e) {
-    console.error('加载用户失败:', e);
-  }
+    if (result.success) { renderUserList(result.users); }
+  } catch (e) { console.error('加载用户失败:', e); }
 }
 
 function renderUserList(users) {
   const container = document.getElementById('userList');
-  if (!users || users.length === 0) {
-    container.innerHTML = '<p style="color:#64748b;font-size:12px;padding:10px;">暂无用户</p>';
-    return;
-  }
+  if (!users || users.length === 0) { container.innerHTML = '<p style="color:#64748b;font-size:12px;padding:10px;">暂无用户</p>'; return; }
   container.innerHTML = users.map(user => `
     <div class="user-item">
       <div class="user-info">
@@ -848,37 +826,18 @@ function showAddUserModal() {
   document.getElementById('newUserPassword').value = '';
 }
 
-function hideAddUserModal() {
-  document.getElementById('addUserModal').classList.remove('show');
-}
+function hideAddUserModal() { document.getElementById('addUserModal').classList.remove('show'); }
 
 async function createUser() {
   const account = document.getElementById('newUserAccount').value.trim();
   const password = document.getElementById('newUserPassword').value;
-  
-  if (!account || !password) {
-    alert('请输入账号和密码');
-    return;
-  }
-  
+  if (!account || !password) { alert('请输入账号和密码'); return; }
   try {
-    const res = await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account, password, role: 'user' })
-    });
+    const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account, password, role: 'user' }) });
     const result = await res.json();
-    
-    if (result.success) {
-      alert('用户创建成功！');
-      hideAddUserModal();
-      loadUsers();
-    } else {
-      alert(result.message || '创建失败');
-    }
-  } catch (e) {
-    alert('创建失败，请重试');
-  }
+    if (result.success) { alert('用户创建成功！'); hideAddUserModal(); loadUsers(); }
+    else { alert(result.message || '创建失败'); }
+  } catch (e) { alert('创建失败，请重试'); }
 }
 
 function editUserPassword(userId, account) {
@@ -887,80 +846,46 @@ function editUserPassword(userId, account) {
   document.getElementById('editUserModal').classList.add('show');
 }
 
-function hideEditUserModal() {
-  document.getElementById('editUserModal').classList.remove('show');
-}
+function hideEditUserModal() { document.getElementById('editUserModal').classList.remove('show'); }
 
 async function updateUserPassword() {
   const userId = document.getElementById('editUserId').value;
   const password = document.getElementById('editUserPassword').value;
-  
-  if (!password) {
-    alert('请输入新密码');
-    return;
-  }
-  
+  if (!password) { alert('请输入新密码'); return; }
   try {
-    const res = await fetch(`/api/admin/users/${userId}/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
+    const res = await fetch(`/api/admin/users/${userId}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
     const result = await res.json();
-    
-    if (result.success) {
-      alert('密码已更新！');
-      hideEditUserModal();
-    } else {
-      alert(result.message || '更新失败');
-    }
-  } catch (e) {
-    alert('更新失败，请重试');
-  }
+    if (result.success) { alert('密码已更新！'); hideEditUserModal(); }
+    else { alert(result.message || '更新失败'); }
+  } catch (e) { alert('更新失败，请重试'); }
 }
 
 async function resetUserData(userId) {
   if (!confirm('确定要重置该用户的所有数据吗？此操作不可恢复！')) return;
-  
   try {
     const res = await fetch(`/api/admin/users/${userId}/reset`, { method: 'POST' });
     const result = await res.json();
-    
-    if (result.success) {
-      alert('用户数据已重置！');
-    } else {
-      alert(result.message || '重置失败');
-    }
-  } catch (e) {
-    alert('重置失败，请重试');
-  }
+    if (result.success) { alert('用户数据已重置！'); }
+    else { alert(result.message || '重置失败'); }
+  } catch (e) { alert('重置失败，请重试'); }
 }
 
 async function deleteUser(userId, account) {
   if (!confirm(`确定要删除用户 "${account}" 吗？此操作不可恢复！`)) return;
-  
   try {
     const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
     const result = await res.json();
-    
-    if (result.success) {
-      alert('用户已删除！');
-      loadUsers();
-    } else {
-      alert(result.message || '删除失败');
-    }
-  } catch (e) {
-    alert('删除失败，请重试');
-  }
+    if (result.success) { alert('用户已删除！'); loadUsers(); }
+    else { alert(result.message || '删除失败'); }
+  } catch (e) { alert('删除失败，请重试'); }
 }
 
-// ========== 渲染主界面 ==========
 function renderAll() {
   if (!gameData) return;
   const r = gameData.exchangeRate, a = getActualRates(), summary = calcAllAccounts();
   const petSummary = calcAllAccountsPetValue();
   const today = getToday();
-  
+
   document.getElementById('currentDateDisplay').textContent = today;
   const lastDate = gameData.lastDataDate || today;
   document.getElementById('dataDateDisplay').textContent = lastDate;
@@ -1043,14 +968,12 @@ function renderAll() {
 
   renderAccountTabs(); renderAccountDetail();
 
-  // 道具价格表格 - 普通用户只读
   document.getElementById('itemsTable').innerHTML = gameData.items.map(item => `
     <tr><td><b>${item.name}</b></td>
     <td>${isAdmin ? `<input type="number" value="${item.price}" step="0.01" onchange="updateItemPrice('${item.id}', this.value)" class="wide">` : item.price}</td>
     ${isAdmin ? `<td><button class="delete-btn" onclick="deleteItem('${item.id}')">🗑️</button></td>` : ''}</tr>
   `).join('');
 
-  // 宠物价格表格 - 普通用户只读
   document.getElementById('petsTable').innerHTML = gameData.pets.map(pet => {
     const rmbValue = petGemToRmb(pet.price);
     return `<tr><td><b>🐉 ${pet.name}</b></td>
@@ -1066,8 +989,7 @@ function renderAll() {
   document.getElementById('feeRate').value = r.feeRate * 100;
   document.getElementById('actualJadeToGem').textContent = a.jadeToGem.toFixed(6);
   document.getElementById('feeDisplay').textContent = (r.feeRate * 100).toFixed(0);
-  
-  // 普通用户禁用兑换率输入
+
   if (!isAdmin) {
     document.querySelectorAll('.admin-editable').forEach(el => { el.disabled = true; el.style.opacity = '0.6'; });
   }
@@ -1094,7 +1016,7 @@ function renderTodayPriceTimeline() {
   const today = getToday();
   const todayRecords = gameData.priceHistory.filter(p => p.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
   if (todayRecords.length === 0) { document.getElementById('todayPriceTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">今日暂无价格记录</p>'; return; }
-  document.getElementById('todayPriceTimeline').innerHTML = todayRecords.map(p => `<div class="price-timeline-item"><span>${p.itemName}</span><span><span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span></div>`).join('');
+  document.getElementById('todayPriceTimeline').innerHTML = todayRecords.map(p => `<div class="price-timeline-item"><span>${p.itemName}</span><span><span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span>${isAdmin ? `<button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button>` : ''}</div>`).join('');
 }
 
 function renderTodayRateTimeline() {
@@ -1123,7 +1045,7 @@ function renderAccountDetail() {
   const netJade = itemJade + canJade - totalConsume;
   const petValue = petGemToRmb(calcAccountPetValue(account));
   const petCount = calcAccountPetCount(account);
-  
+
   const petRows = gameData.pets.map(pet => {
     const count = (account.ownedPets || {})[pet.id] || 0;
     const petRmb = petGemToRmb(pet.price);
@@ -1135,7 +1057,7 @@ function renderAccountDetail() {
       <span style="font-size:11px;color:#64748b;">只</span>
     </div>`;
   }).join('');
-  
+
   document.getElementById('accountDetail').innerHTML = `
     <div class="card account-card">
       <div class="card-title">📝 ${account.name} - 今日数据录入</div>
@@ -1185,34 +1107,34 @@ function updateAccountPetCan(accountId, value) { const account = gameData.accoun
 function updateAccountConsume(accountId, value) { const account = gameData.accounts.find(a => a.id === accountId); if (account) { initAccountData(account); account.dailyData.canConsume = parseFloat(value) || 0; saveData(); renderAll(); } }
 function updateAccountExtraConsume(accountId, value) { const account = gameData.accounts.find(a => a.id === accountId); if (account) { initAccountData(account); account.dailyData.extraConsume = parseFloat(value) || 0; saveData(); renderAll(); } }
 
-function updateAccountPetCount(accountId, petId, value) { 
-  const account = gameData.accounts.find(a => a.id === accountId); 
-  if (account) { 
+function updateAccountPetCount(accountId, petId, value) {
+  const account = gameData.accounts.find(a => a.id === accountId);
+  if (account) {
     initAccountData(account);
     const count = parseInt(value) || 0;
     if (count > 0) account.ownedPets[petId] = count;
     else delete account.ownedPets[petId];
     saveData();
     if (isAdmin) saveAccountValueSnapshot();
-    renderAll(); 
-  } 
+    renderAll();
+  }
 }
 
-function updateItemPrice(itemId, value) { 
+function updateItemPrice(itemId, value) {
   if (!isAdmin) return;
-  const item = gameData.items.find(i => i.id === itemId); 
-  if (item) { item.price = parseFloat(value) || 0; saveData(); renderAll(); } 
+  const item = gameData.items.find(i => i.id === itemId);
+  if (item) { item.price = parseFloat(value) || 0; saveData(); renderAll(); }
 }
 
-function updatePetPrice(petId, value) { 
+function updatePetPrice(petId, value) {
   if (!isAdmin) return;
-  const pet = gameData.pets.find(p => p.id === petId); 
-  if (pet) { 
-    pet.price = parseFloat(value) || 0; 
+  const pet = gameData.pets.find(p => p.id === petId);
+  if (pet) {
+    pet.price = parseFloat(value) || 0;
     saveData();
     if (isAdmin) saveAccountValueSnapshot();
-    renderAll(); 
-  } 
+    renderAll();
+  }
 }
 
 function savePriceRecord() {
@@ -1306,23 +1228,18 @@ function renderProfitHistoryTable() {
   }).join('');
 }
 
-// 图表
 function renderAccountValueChart() {
   if (!gameData) return;
   const accountId = document.getElementById('valueChartAccount')?.value || 'all';
   const range = document.getElementById('valueChartRange')?.value || 'month';
-  const today = getToday();
-  
   let records = [...(gameData.accountValueHistory || [])];
   let startDate;
   if (range === 'week') startDate = getWeekStart();
   else if (range === 'month') startDate = getMonthStart();
   else if (range === 'year') startDate = getYearStart();
   else startDate = null;
-  
   if (startDate) records = records.filter(p => p.date >= startDate);
   records.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
-  
   const grouped = {};
   records.forEach(r => {
     const key = r.date + ' ' + (r.time || '00:00');
@@ -1330,88 +1247,32 @@ function renderAccountValueChart() {
     grouped[key].accounts[r.accountId] = r.totalValue;
     grouped[key].total = Object.values(grouped[key].accounts).reduce((s, v) => s + v, 0);
   });
-  
   const keys = Object.keys(grouped).sort();
-  
   if (accountValueChart) accountValueChart.destroy();
   const ctx = document.getElementById('accountValueChart').getContext('2d');
-  
   const datasets = [];
-  
   if (accountId === 'all') {
     gameData.accounts.forEach((acc, idx) => {
-      datasets.push({
-        label: acc.name,
-        data: keys.map(k => grouped[k].accounts[acc.id] || 0),
-        borderColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length],
-        backgroundColor: 'transparent',
-        fill: false,
-        tension: 0.3,
-        pointRadius: 3,
-        borderWidth: 2
-      });
+      datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[acc.id] || 0), borderColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2 });
     });
   } else {
     const acc = gameData.accounts.find(a => a.id === accountId);
-    if (acc) {
-      datasets.push({
-        label: acc.name,
-        data: keys.map(k => grouped[k].accounts[accountId] || 0),
-        borderColor: ACCOUNT_COLORS[0],
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 4,
-        borderWidth: 2
-      });
-    }
+    if (acc) { datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[accountId] || 0), borderColor: ACCOUNT_COLORS[0], backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2 }); }
   }
-  
   if (accountId === 'all') {
-    datasets.push({
-      label: '总价值（¥）',
-      data: keys.map(k => grouped[k].total),
-      borderColor: '#ec4899',
-      backgroundColor: 'rgba(236, 72, 153, 0.2)',
-      fill: true,
-      tension: 0.3,
-      pointRadius: 4,
-      borderWidth: 3
-    });
+    datasets.push({ label: '总价值（¥）', data: keys.map(k => grouped[k].total), borderColor: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.2)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 3 });
   }
-  
-  const displayLabels = keys.map(k => {
-    const [date, time] = k.split(' ');
-    return time !== '00:00' ? `${formatDate(date)} ${time}` : formatDate(date);
-  });
-  
-  accountValueChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: displayLabels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' },
-        tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ¥' + context.parsed.y.toFixed(2); } } }
-      },
-      scales: {
-        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#64748b', callback: function(value) { return '¥' + value.toFixed(0); } }, grid: { color: 'rgba(255,255,255,0.05)' } }
-      }
-    }
-  });
+  const displayLabels = keys.map(k => { const [date, time] = k.split(' '); return time !== '00:00' ? `${formatDate(date)} ${time}` : formatDate(date); });
+  accountValueChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ¥' + context.parsed.y.toFixed(2); } } } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b', callback: function(value) { return '¥' + value.toFixed(0); } }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
 function renderPriceChart() {
   const itemName = document.getElementById('priceChartItem')?.value;
   if (!itemName || !gameData) return;
   const range = document.getElementById('priceChartRange')?.value || 'month';
-  const today = getToday();
   let records = gameData.priceHistory.filter(p => p.itemName === itemName);
   let startDate;
-  if (range === 'day') startDate = today;
+  if (range === 'day') startDate = getToday();
   else if (range === 'week') startDate = getWeekStart();
   else if (range === 'month') startDate = getMonthStart();
   else if (range === 'year') startDate = getYearStart();
@@ -1431,10 +1292,9 @@ function renderRateChart() {
   if (!gameData) return;
   const type = document.getElementById('rateChartType').value;
   const range = document.getElementById('rateChartRange')?.value || 'month';
-  const today = getToday();
   let records = [...gameData.rateHistory];
   let startDate;
-  if (range === 'day') startDate = today;
+  if (range === 'day') startDate = getToday();
   else if (range === 'week') startDate = getWeekStart();
   else if (range === 'month') startDate = getMonthStart();
   else if (range === 'year') startDate = getYearStart();
@@ -1457,10 +1317,9 @@ function renderPetChart() {
   const petName = document.getElementById('petChartItem')?.value;
   if (!petName || !gameData) return;
   const range = document.getElementById('petChartRange')?.value || 'month';
-  const today = getToday();
   let records = (gameData.petPriceHistory || []).filter(p => p.petName === petName);
   let startDate;
-  if (range === 'day') startDate = today;
+  if (range === 'day') startDate = getToday();
   else if (range === 'week') startDate = getWeekStart();
   else if (range === 'month') startDate = getMonthStart();
   else if (range === 'year') startDate = getYearStart();
@@ -1516,96 +1375,96 @@ function generateReport(type) { const startDate = document.getElementById('repor
 function copyReport() { navigator.clipboard.writeText(currentReport).then(() => alert('已复制到剪贴板')); }
 function downloadReport() { const blob = new Blob([currentReport], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `收益报表_${getToday()}.txt`; a.click(); }
 function exportData() { const dataStr = JSON.stringify(gameData, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `游戏收益数据_${getToday()}.json`; a.click(); }
-function importData(event) { 
+function importData(event) {
   if (!isAdmin) { alert('普通用户无法导入数据'); return; }
-  const file = event.target.files[0]; 
-  if (!file) return; 
-  const reader = new FileReader(); 
-  reader.onload = function(e) { 
-    try { 
-      const imported = JSON.parse(e.target.result); 
-      if (confirm('确定导入数据吗？当前数据将被覆盖。')) { 
-        gameData = imported; 
-        gameData.accounts.forEach(a => initAccountData(a)); 
-        if (gameData.realizedProfit === undefined) gameData.realizedProfit = 0; 
-        if (!gameData.rateHistory) gameData.rateHistory = []; 
-        if (!gameData.investHistory) gameData.investHistory = []; 
-        if (gameData.totalInvest === undefined) gameData.totalInvest = 0; 
-        if (!gameData.lastDataDate) gameData.lastDataDate = getToday(); 
-        if (!gameData.pets) gameData.pets = DEFAULT_DATA.pets; 
-        if (!gameData.petPriceHistory) gameData.petPriceHistory = []; 
-        if (!gameData.accountValueHistory) gameData.accountValueHistory = []; 
-        saveData(); renderAll(); alert('导入成功！'); 
-      } 
-    } catch (err) { alert('导入失败：文件格式错误'); } 
-  }; 
-  reader.readAsText(file); 
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (confirm('确定导入数据吗？当前数据将被覆盖。')) {
+        gameData = imported;
+        gameData.accounts.forEach(a => initAccountData(a));
+        if (gameData.realizedProfit === undefined) gameData.realizedProfit = 0;
+        if (!gameData.rateHistory) gameData.rateHistory = [];
+        if (!gameData.investHistory) gameData.investHistory = [];
+        if (gameData.totalInvest === undefined) gameData.totalInvest = 0;
+        if (!gameData.lastDataDate) gameData.lastDataDate = getToday();
+        if (!gameData.pets) gameData.pets = DEFAULT_DATA.pets;
+        if (!gameData.petPriceHistory) gameData.petPriceHistory = [];
+        if (!gameData.accountValueHistory) gameData.accountValueHistory = [];
+        saveData(); renderAll(); alert('导入成功！');
+      }
+    } catch (err) { alert('导入失败：文件格式错误'); }
+  };
+  reader.readAsText(file);
 }
-function parseAndImport() { 
+function parseAndImport() {
   if (!isAdmin) { alert('普通用户无法导入数据'); return; }
-  const text = document.getElementById('importText').value; 
-  if (!text.trim()) { alert('请输入数据'); return; } 
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean); 
-  let currentDate = null, currentTime = null, importCount = 0; 
-  lines.forEach(line => { 
-    const dateMatch = line.match(/日期[:\s]*(\d{4}-\d{2}-\d{2})/); 
-    if (dateMatch) { currentDate = dateMatch[1]; return; } 
-    const timeMatch = line.match(/(\d{1,2}:\d{2})/); 
-    if (timeMatch) currentTime = timeMatch[1]; 
-    else currentTime = getNowTime(); 
-    if (line.includes('价格')) { 
-      const priceMatch = line.match(/价格[^:]*:\s*(.+)/); 
-      if (priceMatch) { 
-        const items = priceMatch[1].split(','); 
-        items.forEach(item => { 
-          const match = item.match(/(.+?)(\d+\.?\d*)$/); 
-          if (match && currentDate) { 
-            const name = match[1].trim(), price = parseFloat(match[2]); 
-            gameData.priceHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, itemName: name, price: price }); 
-            importCount++; 
-          } 
-        }); 
-      } 
-    } 
-    if (line.includes('兑换率')) { 
-      const jadeMatch = line.match(/玉石换宝石(\d+\.?\d*)/); 
-      const gemMatch = line.match(/宝石换人民币(\d+\.?\d*)/); 
-      const feeMatch = line.match(/手续费(\d+)/); 
-      if (currentDate && (jadeMatch || gemMatch || feeMatch)) { 
-        gameData.rateHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, jadeToGem: jadeMatch ? parseFloat(jadeMatch[1]) : gameData.exchangeRate.jadeToGem, gemToRmb: gemMatch ? parseFloat(gemMatch[1]) : gameData.exchangeRate.gemToRmb, feeRate: feeMatch ? parseFloat(feeMatch[1]) / 100 : gameData.exchangeRate.feeRate }); 
-        importCount++; 
-      } 
-    } 
-    const accountMatch = line.match(/^(.+?)[:\s](.+)$/); 
-    if (accountMatch && currentDate && !line.includes('价格') && !line.includes('兑换率') && !line.includes('日期')) { 
-      const accountName = accountMatch[1].trim(), dataStr = accountMatch[2]; 
-      const account = gameData.accounts.find(a => a.name === accountName); 
-      if (account) { 
-        initAccountData(account); 
-        const itemPattern = /(.+?)(\d+)/g; 
-        let match; 
-        while ((match = itemPattern.exec(dataStr)) !== null) { 
-          const itemName = match[1].trim(), count = parseInt(match[2]); 
-          if (itemName === '抓宠罐头') account.dailyData.petCan = count; 
-          else if (itemName === '消耗罐头') account.dailyData.canConsume = count; 
-          else { const item = gameData.items.find(i => i.name === itemName); if (item) account.dailyData.items[item.id] = count; } 
-        } 
-        importCount++; 
-      } 
-    } 
-  }); 
-  if (importCount > 0) { saveData(); renderAll(); document.getElementById('importResult').innerHTML = `<div style="color:#10b981;">✅ 成功导入 ${importCount} 条记录</div>`; } else { document.getElementById('importResult').innerHTML = `<div style="color:#ef4444;">❌ 未识别到有效数据</div>`; } 
+  const text = document.getElementById('importText').value;
+  if (!text.trim()) { alert('请输入数据'); return; }
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let currentDate = null, currentTime = null, importCount = 0;
+  lines.forEach(line => {
+    const dateMatch = line.match(/日期[:\s]*(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) { currentDate = dateMatch[1]; return; }
+    const timeMatch = line.match(/(\d{1,2}:\d{2})/);
+    if (timeMatch) currentTime = timeMatch[1];
+    else currentTime = getNowTime();
+    if (line.includes('价格')) {
+      const priceMatch = line.match(/价格[^:]*:\s*(.+)/);
+      if (priceMatch) {
+        const items = priceMatch[1].split(',');
+        items.forEach(item => {
+          const match = item.match(/(.+?)(\d+\.?\d*)$/);
+          if (match && currentDate) {
+            const name = match[1].trim(), price = parseFloat(match[2]);
+            gameData.priceHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, itemName: name, price: price });
+            importCount++;
+          }
+        });
+      }
+    }
+    if (line.includes('兑换率')) {
+      const jadeMatch = line.match(/玉石换宝石(\d+\.?\d*)/);
+      const gemMatch = line.match(/宝石换人民币(\d+\.?\d*)/);
+      const feeMatch = line.match(/手续费(\d+)/);
+      if (currentDate && (jadeMatch || gemMatch || feeMatch)) {
+        gameData.rateHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, jadeToGem: jadeMatch ? parseFloat(jadeMatch[1]) : gameData.exchangeRate.jadeToGem, gemToRmb: gemMatch ? parseFloat(gemMatch[1]) : gameData.exchangeRate.gemToRmb, feeRate: feeMatch ? parseFloat(feeMatch[1]) / 100 : gameData.exchangeRate.feeRate });
+        importCount++;
+      }
+    }
+    const accountMatch = line.match(/^(.+?)[:\s](.+)$/);
+    if (accountMatch && currentDate && !line.includes('价格') && !line.includes('兑换率') && !line.includes('日期')) {
+      const accountName = accountMatch[1].trim(), dataStr = accountMatch[2];
+      const account = gameData.accounts.find(a => a.name === accountName);
+      if (account) {
+        initAccountData(account);
+        const itemPattern = /(.+?)(\d+)/g;
+        let match;
+        while ((match = itemPattern.exec(dataStr)) !== null) {
+          const itemName = match[1].trim(), count = parseInt(match[2]);
+          if (itemName === '抓宠罐头') account.dailyData.petCan = count;
+          else if (itemName === '消耗罐头') account.dailyData.canConsume = count;
+          else { const item = gameData.items.find(i => i.name === itemName); if (item) account.dailyData.items[item.id] = count; }
+        }
+        importCount++;
+      }
+    }
+  });
+  if (importCount > 0) { saveData(); renderAll(); document.getElementById('importResult').innerHTML = `<div style="color:#10b981;">✅ 成功导入 ${importCount} 条记录</div>`; } else { document.getElementById('importResult').innerHTML = `<div style="color:#ef4444;">❌ 未识别到有效数据</div>`; }
 }
-async function resetAllData() { 
-  if (!isAdmin) return; 
-  if (confirm('确定要重置所有数据吗？此操作不可恢复！')) { 
-    try { 
-      await fetch('/api/data', { method: 'DELETE', headers: { 'x-user-id': currentUserId || '1' } }); 
-      gameData = await loadData(); 
-      renderAll(); 
-      alert('数据已重置！'); 
-    } catch (e) { console.error('重置失败:', e); alert('重置失败，请重试'); } 
-  } 
+async function resetAllData() {
+  if (!isAdmin) return;
+  if (confirm('确定要重置所有数据吗？此操作不可恢复！')) {
+    try {
+      await fetch('/api/data', { method: 'DELETE', headers: { 'x-user-id': currentUserId || '1' } });
+      gameData = await loadData();
+      renderAll();
+      alert('数据已重置！');
+    } catch (e) { console.error('重置失败:', e); alert('重置失败，请重试'); }
+  }
 }
 function showAddAccountModal() { document.getElementById('addAccountModal').classList.add('show'); document.getElementById('newAccountName').value = ''; }
 function hideAddAccountModal() { document.getElementById('addAccountModal').classList.remove('show'); }
