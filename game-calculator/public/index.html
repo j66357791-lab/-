@@ -104,6 +104,7 @@
     .report-preview { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px; margin-top: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; color: #94a3b8; }
     .import-hint { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 11px; color: #93c5fd; }
     .time-badge { display: inline-block; padding: 2px 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; font-size: 10px; color: #93c5fd; margin-left: 4px; }
+    .date-badge { display: inline-block; padding: 2px 6px; background: rgba(139, 92, 246, 0.2); border-radius: 3px; font-size: 10px; color: #c4b5fd; }
     .price-timeline { background: rgba(0,0,0,0.2); border-radius: 6px; padding: 10px; margin-top: 10px; }
     .price-timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
     .price-timeline-item:last-child { border-bottom: none; }
@@ -126,17 +127,8 @@
     .date-info .old { color: #f59e0b; }
     details summary { cursor: pointer; }
     .pet-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin: 4px 0; }
-    .pet-row .pet-name { flex: 1; font-size: 12px; }
-    .pet-row .pet-price { font-size: 11px; color: #64748b; }
     .pet-row.owned { background: rgba(16, 185, 129, 0.15); }
     .value-card { background: linear-gradient(135deg, rgba(236, 72, 153, 0.3) 0%, rgba(190, 24, 93, 0.3) 100%); }
-    .user-card { background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.3) 100%); }
-    .user-item { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-    .user-item .user-info { flex: 1; }
-    .user-item .user-info h4 { font-size: 13px; margin-bottom: 4px; }
-    .user-item .user-info p { font-size: 11px; color: #64748b; }
-    .user-item .user-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .readonly-badge { background: #64748b; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; }
     @media (max-width: 600px) { .header h1 { font-size: 18px; } .profit-value { font-size: 16px; } .tab-btn { padding: 6px 10px; font-size: 11px; } th, td { padding: 6px 2px; font-size: 10px; } input[type="number"] { max-width: 50px; } .chart-container { height: 180px; } }
   </style>
 </head>
@@ -167,7 +159,6 @@
       <button class="tab-btn" onclick="switchTab('report')">📄 报表导出</button>
       <button class="tab-btn" onclick="switchTab('import')">📥 数据导入</button>
       <button class="tab-btn" onclick="switchTab('history')">📈 历史走势</button>
-      <button class="tab-btn admin-only" onclick="switchTab('users')">👥 用户管理</button>
       <button class="tab-btn" onclick="switchTab('settings')">⚙️ 设置</button>
     </div>
     <!-- 总览 -->
@@ -253,7 +244,7 @@
     <div id="items" class="tab-content">
       <div class="card">
         <div class="card-title">📦 道具价格设置</div>
-        <div class="card-desc">价格单位：玉石 <span class="admin-only">| 点击保存按钮记录当前价格</span><span class="readonly-badge admin-only" style="display:none;">只读</span></div>
+        <div class="card-desc">价格单位：玉石 <span class="admin-only">| 点击保存按钮记录当前价格</span></div>
         <div class="table-wrapper">
           <table><thead><tr><th>道具名称</th><th>当前单价(玉石)</th><th class="admin-only">操作</th></tr></thead><tbody id="itemsTable"></tbody></table>
         </div>
@@ -276,6 +267,10 @@
       <div class="card">
         <div class="card-title">📊 今日道具价格变化</div>
         <div id="todayPriceTimeline" class="price-timeline"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 历史道具价格记录 <span style="font-size:11px;color:#64748b;font-weight:normal;" id="historyPriceCount"></span></div>
+        <div id="historyPriceTimeline" class="price-timeline" style="max-height:400px;overflow-y:auto;"></div>
       </div>
     </div>
     <!-- 兑换率 -->
@@ -407,30 +402,6 @@
           </div>
         </details>
       </div>
-      <div class="card">
-        <div class="card-title">📋 道具价格历史记录</div>
-        <div id="priceHistoryToday"></div>
-        <details style="margin-top:10px;">
-          <summary style="cursor:pointer;color:#64748b;font-size:12px;padding:8px;background:rgba(0,0,0,0.2);border-radius:4px;">📂 点击查看历史记录</summary>
-          <div class="table-wrapper" style="margin-top:10px;">
-            <table><thead><tr><th>日期</th><th>时间</th><th>道具</th><th>价格(玉石)</th><th class="admin-only">操作</th></tr></thead><tbody id="priceHistoryTable"></tbody></table>
-          </div>
-        </details>
-      </div>
-    </div>
-    <!-- 用户管理 -->
-    <div id="users" class="tab-content">
-      <div class="card user-card">
-        <div class="card-title">👥 用户管理</div>
-        <div class="card-desc">管理员可以创建、修改、删除用户账号，每个用户拥有独立的数据空间</div>
-        <div style="margin-bottom: 12px;">
-          <button class="btn btn-primary btn-small admin-only" onclick="showAddUserModal()" style="margin-top:10px;">➕ 创建新用户</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">📋 用户列表</div>
-        <div id="userList"></div>
-      </div>
     </div>
     <!-- 设置 -->
     <div id="settings" class="tab-content">
@@ -488,28 +459,6 @@
       </div>
     </div>
   </div>
-  <div id="addUserModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header"><div class="modal-title">创建新用户</div></div>
-      <div class="form-group"><label>用户账号</label><input type="text" id="newUserAccount" placeholder="请输入账号"></div>
-      <div class="form-group"><label>用户密码</label><input type="password" id="newUserPassword" placeholder="请输入密码"></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline btn-small" onclick="hideAddUserModal()">取消</button>
-        <button class="btn btn-primary btn-small" onclick="createUser()">创建</button>
-      </div>
-    </div>
-  </div>
-  <div id="editUserModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header"><div class="modal-title">修改用户密码</div></div>
-      <input type="hidden" id="editUserId">
-      <div class="form-group"><label>新密码</label><input type="password" id="editUserPassword" placeholder="请输入新密码"></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline btn-small" onclick="hideEditUserModal()">取消</button>
-        <button class="btn btn-primary btn-small" onclick="updateUserPassword()">保存</button>
-      </div>
-    </div>
-  </div>
   <script>
 let currentUser = null, isAdmin = false, currentUserId = null, gameData = null, currentAccountId = '1';
 let priceChart = null, profitChart = null, rateChart = null, petChart = null, accountValueChart = null, accountCompareChart = null, currentReport = '';
@@ -522,13 +471,6 @@ function getYearStart() { const d = new Date(getToday()); return `${d.getFullYea
 function formatDate(date) { const d = new Date(date); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 const ACCOUNT_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#ec4899'];
-
-async function apiRequest(url, method = 'GET', data = null) {
-  const options = { method, headers: { 'Content-Type': 'application/json', 'x-user-id': currentUserId || '1' } };
-  if (data) options.body = JSON.stringify(data);
-  const res = await fetch(url, options);
-  return await res.json();
-}
 
 async function doLogin() {
   const account = document.getElementById('loginAccount').value.trim();
@@ -733,9 +675,8 @@ function calcAccountNetJade(account) { return calcAccountTotalJade(account) - ca
 function calcAccountPetValue(account) {
   initAccountData(account);
   let totalGem = 0;
-  const ownedPets = account.ownedPets || {};
-  Object.keys(ownedPets).forEach(petId => {
-    const count = ownedPets[petId] || 0;
+  Object.keys(account.ownedPets || {}).forEach(petId => {
+    const count = account.ownedPets[petId] || 0;
     if (count > 0) { const pet = gameData.pets.find(p => p.id === petId); if (pet && pet.price > 0) totalGem += pet.price * count; }
   });
   return totalGem;
@@ -743,8 +684,7 @@ function calcAccountPetValue(account) {
 
 function calcAccountPetCount(account) {
   initAccountData(account);
-  const ownedPets = account.ownedPets || {};
-  return Object.values(ownedPets).reduce((sum, count) => sum + (count || 0), 0);
+  return Object.values(account.ownedPets || {}).reduce((sum, count) => sum + (count || 0), 0);
 }
 
 function calcAllAccountsPetValue() {
@@ -771,115 +711,53 @@ function switchTab(tabId) {
   event.target.classList.add('active');
   if (tabId === 'history') { renderAccountValueChart(); renderPriceChart(); renderProfitChart(); renderRateChart(); renderPetChart(); renderAccountCompareChart(); }
   if (tabId === 'report') initReportDates();
-  if (tabId === 'users') loadUsers();
 }
 
 function saveAccountValueSnapshot() {
-  const today = getToday();
-  const time = getNowTime();
+  const today = getToday(), time = getNowTime();
   gameData.accounts.forEach(acc => {
     initAccountData(acc);
     const petValue = petGemToRmb(calcAccountPetValue(acc));
     const petCount = calcAccountPetCount(acc);
     gameData.accountValueHistory.push({
       id: Date.now().toString() + Math.random(),
-      date: today, time: time,
-      accountId: acc.id, accountName: acc.name,
+      date: today, time: time, accountId: acc.id, accountName: acc.name,
       petValue: petValue, petCount: petCount, totalValue: petValue
     });
   });
   saveData();
 }
 
-async function loadUsers() {
-  if (!isAdmin) return;
-  try {
-    const res = await fetch('/api/admin/users');
-    const result = await res.json();
-    if (result.success) { renderUserList(result.users); }
-  } catch (e) { console.error('加载用户失败:', e); }
+// ========== 道具价格：今日 + 历史记录渲染 ==========
+function renderTodayPriceTimeline() {
+  const today = getToday();
+  const todayRecords = gameData.priceHistory.filter(p => p.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+  if (todayRecords.length === 0) { document.getElementById('todayPriceTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">今日暂无价格记录</p>'; return; }
+  document.getElementById('todayPriceTimeline').innerHTML = todayRecords.map(p => `<div class="price-timeline-item"><span>${p.itemName}</span><span><span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span>${isAdmin ? `<button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button>` : ''}</div>`).join('');
 }
 
-function renderUserList(users) {
-  const container = document.getElementById('userList');
-  if (!users || users.length === 0) { container.innerHTML = '<p style="color:#64748b;font-size:12px;padding:10px;">暂无用户</p>'; return; }
-  container.innerHTML = users.map(user => `
-    <div class="user-item">
-      <div class="user-info">
-        <h4>${user.account} ${user.role === 'admin' ? '<span class="admin-badge">管理员</span>' : '<span class="user-badge">普通用户</span>'}</h4>
-        <p>创建时间: ${user.created_at || '--'}</p>
-      </div>
-      <div class="user-actions">
-        <button class="btn btn-outline btn-small" onclick="editUserPassword(${user.id}, '${user.account}')">修改密码</button>
-        ${user.role !== 'admin' ? `
-          <button class="btn btn-warning btn-small" onclick="resetUserData(${user.id})">重置数据</button>
-          <button class="btn btn-danger btn-small" onclick="deleteUser(${user.id}, '${user.account}')">删除</button>
-        ` : ''}
-      </div>
-    </div>
-  `).join('');
+function renderHistoryPriceTimeline() {
+  const today = getToday();
+  // 取非今日记录，按时间正序（旧→新），最多100条
+  const historyRecords = gameData.priceHistory
+    .filter(p => p.date !== today)
+    .sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date);
+      return cmp !== 0 ? cmp : (a.time || '').localeCompare(b.time || '');
+    })
+    .slice(-100);
+
+  const countEl = document.getElementById('historyPriceCount');
+  if (historyRecords.length === 0) {
+    countEl.textContent = '';
+    document.getElementById('historyPriceTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">暂无历史价格记录</p>';
+    return;
+  }
+  countEl.textContent = `(共${historyRecords.length}条)`;
+  document.getElementById('historyPriceTimeline').innerHTML = historyRecords.map(p => `<div class="price-timeline-item"><span>${p.itemName}</span><span><span class="date-badge">${p.date}</span> <span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span>${isAdmin ? `<button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button>` : ''}</div>`).join('');
 }
 
-function showAddUserModal() {
-  document.getElementById('addUserModal').classList.add('show');
-  document.getElementById('newUserAccount').value = '';
-  document.getElementById('newUserPassword').value = '';
-}
-
-function hideAddUserModal() { document.getElementById('addUserModal').classList.remove('show'); }
-
-async function createUser() {
-  const account = document.getElementById('newUserAccount').value.trim();
-  const password = document.getElementById('newUserPassword').value;
-  if (!account || !password) { alert('请输入账号和密码'); return; }
-  try {
-    const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account, password, role: 'user' }) });
-    const result = await res.json();
-    if (result.success) { alert('用户创建成功！'); hideAddUserModal(); loadUsers(); }
-    else { alert(result.message || '创建失败'); }
-  } catch (e) { alert('创建失败，请重试'); }
-}
-
-function editUserPassword(userId, account) {
-  document.getElementById('editUserId').value = userId;
-  document.getElementById('editUserPassword').value = '';
-  document.getElementById('editUserModal').classList.add('show');
-}
-
-function hideEditUserModal() { document.getElementById('editUserModal').classList.remove('show'); }
-
-async function updateUserPassword() {
-  const userId = document.getElementById('editUserId').value;
-  const password = document.getElementById('editUserPassword').value;
-  if (!password) { alert('请输入新密码'); return; }
-  try {
-    const res = await fetch(`/api/admin/users/${userId}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
-    const result = await res.json();
-    if (result.success) { alert('密码已更新！'); hideEditUserModal(); }
-    else { alert(result.message || '更新失败'); }
-  } catch (e) { alert('更新失败，请重试'); }
-}
-
-async function resetUserData(userId) {
-  if (!confirm('确定要重置该用户的所有数据吗？此操作不可恢复！')) return;
-  try {
-    const res = await fetch(`/api/admin/users/${userId}/reset`, { method: 'POST' });
-    const result = await res.json();
-    if (result.success) { alert('用户数据已重置！'); }
-    else { alert(result.message || '重置失败'); }
-  } catch (e) { alert('重置失败，请重试'); }
-}
-
-async function deleteUser(userId, account) {
-  if (!confirm(`确定要删除用户 "${account}" 吗？此操作不可恢复！`)) return;
-  try {
-    const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-    const result = await res.json();
-    if (result.success) { alert('用户已删除！'); loadUsers(); }
-    else { alert(result.message || '删除失败'); }
-  } catch (e) { alert('删除失败，请重试'); }
-}
-
+// ========== 渲染主界面 ==========
 function renderAll() {
   if (!gameData) return;
   const r = gameData.exchangeRate, a = getActualRates(), summary = calcAllAccounts();
@@ -892,16 +770,11 @@ function renderAll() {
   if (lastDate !== today) document.getElementById('dataDateDisplay').classList.add('old');
   else document.getElementById('dataDateDisplay').classList.remove('old');
 
-  const todayProfit = calcPeriodProfit(getToday(), getToday());
-  const weekProfit = calcPeriodProfit(getWeekStart(), getToday());
-  const monthProfit = calcPeriodProfit(getMonthStart(), getToday());
-  const yearProfit = calcPeriodProfit(getYearStart(), getToday());
-
   document.getElementById('realizedProfit').textContent = gameData.realizedProfit.toFixed(2);
-  document.getElementById('todayProfit').textContent = todayProfit.toFixed(2);
-  document.getElementById('weekProfit').textContent = weekProfit.toFixed(2);
-  document.getElementById('monthProfit').textContent = monthProfit.toFixed(2);
-  document.getElementById('yearProfit').textContent = yearProfit.toFixed(2);
+  document.getElementById('todayProfit').textContent = calcPeriodProfit(getToday(), getToday()).toFixed(2);
+  document.getElementById('weekProfit').textContent = calcPeriodProfit(getWeekStart(), getToday()).toFixed(2);
+  document.getElementById('monthProfit').textContent = calcPeriodProfit(getMonthStart(), getToday()).toFixed(2);
+  document.getElementById('yearProfit').textContent = calcPeriodProfit(getYearStart(), getToday()).toFixed(2);
 
   document.getElementById('totalGrossProfit').textContent = summary.grossProfit.toFixed(2);
   document.getElementById('totalConsumeCost').textContent = summary.consumeCost.toFixed(2);
@@ -982,7 +855,9 @@ function renderAll() {
     ${isAdmin ? `<td><button class="delete-btn" onclick="deletePet('${pet.id}')">🗑️</button></td>` : ''}</tr>`;
   }).join('');
 
-  renderTodayPriceTimeline(); renderTodayRateTimeline();
+  renderTodayPriceTimeline();
+  renderHistoryPriceTimeline();
+  renderTodayRateTimeline();
 
   document.getElementById('rateJadeToGem').value = r.jadeToGem;
   document.getElementById('rateGemToRmb').value = r.gemToRmb;
@@ -990,9 +865,7 @@ function renderAll() {
   document.getElementById('actualJadeToGem').textContent = a.jadeToGem.toFixed(6);
   document.getElementById('feeDisplay').textContent = (r.feeRate * 100).toFixed(0);
 
-  if (!isAdmin) {
-    document.querySelectorAll('.admin-editable').forEach(el => { el.disabled = true; el.style.opacity = '0.6'; });
-  }
+  if (!isAdmin) { document.querySelectorAll('.admin-editable').forEach(el => { el.disabled = true; el.style.opacity = '0.6'; }); }
 
   document.getElementById('statAccounts').textContent = gameData.accounts.length;
   document.getElementById('statItems').textContent = gameData.items.length;
@@ -1009,14 +882,7 @@ function renderAll() {
   document.getElementById('valueChartAccount').innerHTML = `<option value="all">全部账号</option>` + gameData.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   document.getElementById('reportAccount').innerHTML = `<option value="all">全部账号</option>` + gameData.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
 
-  renderPriceHistoryTable(); renderRateHistoryTable(); renderProfitHistoryTable();
-}
-
-function renderTodayPriceTimeline() {
-  const today = getToday();
-  const todayRecords = gameData.priceHistory.filter(p => p.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
-  if (todayRecords.length === 0) { document.getElementById('todayPriceTimeline').innerHTML = '<p style="color:#64748b;font-size:12px;">今日暂无价格记录</p>'; return; }
-  document.getElementById('todayPriceTimeline').innerHTML = todayRecords.map(p => `<div class="price-timeline-item"><span>${p.itemName}</span><span><span class="time-badge">${p.time || '--:--'}</span> ${p.price}玉石</span>${isAdmin ? `<button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button>` : ''}</div>`).join('');
+  renderRateHistoryTable(); renderProfitHistoryTable();
 }
 
 function renderTodayRateTimeline() {
@@ -1036,13 +902,10 @@ function renderAccountDetail() {
   const account = gameData.accounts.find(a => a.id === currentAccountId);
   if (!account) return;
   initAccountData(account);
-  const itemJade = calcAccountItemJade(account);
-  const canJade = calcAccountCanJade(account);
-  const consumeJade = calcAccountConsumeJade(account);
+  const itemJade = calcAccountItemJade(account), canJade = calcAccountCanJade(account), consumeJade = calcAccountConsumeJade(account);
   const extraConsume = account.dailyData.extraConsume || 0;
   const canConsumeJade = (account.dailyData.canConsume || 0) * getWeightedCanPrice();
-  const totalConsume = consumeJade;
-  const netJade = itemJade + canJade - totalConsume;
+  const netJade = itemJade + canJade - consumeJade;
   const petValue = petGemToRmb(calcAccountPetValue(account));
   const petCount = calcAccountPetCount(account);
 
@@ -1079,7 +942,7 @@ function renderAccountDetail() {
         <div class="form-group"><label>额外消耗玉石（如修理费等）</label><input type="number" value="${extraConsume}" step="0.01" onchange="updateAccountExtraConsume('${account.id}', this.value)"></div>
       </div>
       <div style="margin-top:8px;font-size:12px;color:#64748b;">
-        罐头消耗: ${canConsumeJade.toFixed(2)}玉石 + 额外消耗: ${extraConsume.toFixed(2)}玉石 = 总消耗: <span class="danger">${totalConsume.toFixed(2)}玉石</span>
+        罐头消耗: ${canConsumeJade.toFixed(2)}玉石 + 额外消耗: ${extraConsume.toFixed(2)}玉石 = 总消耗: <span class="danger">${consumeJade.toFixed(2)}玉石</span>
       </div>
     </div>
     <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(109, 40, 217, 0.2) 100%);">
@@ -1096,7 +959,7 @@ function renderAccountDetail() {
       <div class="profit-grid">
         <div class="profit-item"><div class="profit-label">道具收益</div><div class="profit-value small">${itemJade.toFixed(2)}玉石</div></div>
         <div class="profit-item"><div class="profit-label">罐头收益</div><div class="profit-value small">${canJade.toFixed(2)}玉石</div></div>
-        <div class="profit-item"><div class="profit-label">今日玉石消耗</div><div class="profit-value small danger">${totalConsume.toFixed(2)}玉石</div></div>
+        <div class="profit-item"><div class="profit-label">今日玉石消耗</div><div class="profit-value small danger">${consumeJade.toFixed(2)}玉石</div></div>
         <div class="profit-item"><div class="profit-label">净收益</div><div class="profit-value small">¥${jadeToRmbWeighted(netJade).toFixed(2)}</div></div>
       </div>
     </div>`;
@@ -1106,36 +969,12 @@ function updateAccountItem(accountId, itemId, value) { const account = gameData.
 function updateAccountPetCan(accountId, value) { const account = gameData.accounts.find(a => a.id === accountId); if (account) { initAccountData(account); account.dailyData.petCan = parseFloat(value) || 0; saveData(); renderAll(); } }
 function updateAccountConsume(accountId, value) { const account = gameData.accounts.find(a => a.id === accountId); if (account) { initAccountData(account); account.dailyData.canConsume = parseFloat(value) || 0; saveData(); renderAll(); } }
 function updateAccountExtraConsume(accountId, value) { const account = gameData.accounts.find(a => a.id === accountId); if (account) { initAccountData(account); account.dailyData.extraConsume = parseFloat(value) || 0; saveData(); renderAll(); } }
-
 function updateAccountPetCount(accountId, petId, value) {
   const account = gameData.accounts.find(a => a.id === accountId);
-  if (account) {
-    initAccountData(account);
-    const count = parseInt(value) || 0;
-    if (count > 0) account.ownedPets[petId] = count;
-    else delete account.ownedPets[petId];
-    saveData();
-    if (isAdmin) saveAccountValueSnapshot();
-    renderAll();
-  }
+  if (account) { initAccountData(account); const count = parseInt(value) || 0; if (count > 0) account.ownedPets[petId] = count; else delete account.ownedPets[petId]; saveData(); if (isAdmin) saveAccountValueSnapshot(); renderAll(); }
 }
-
-function updateItemPrice(itemId, value) {
-  if (!isAdmin) return;
-  const item = gameData.items.find(i => i.id === itemId);
-  if (item) { item.price = parseFloat(value) || 0; saveData(); renderAll(); }
-}
-
-function updatePetPrice(petId, value) {
-  if (!isAdmin) return;
-  const pet = gameData.pets.find(p => p.id === petId);
-  if (pet) {
-    pet.price = parseFloat(value) || 0;
-    saveData();
-    if (isAdmin) saveAccountValueSnapshot();
-    renderAll();
-  }
-}
+function updateItemPrice(itemId, value) { if (!isAdmin) return; const item = gameData.items.find(i => i.id === itemId); if (item) { item.price = parseFloat(value) || 0; saveData(); renderAll(); } }
+function updatePetPrice(petId, value) { if (!isAdmin) return; const pet = gameData.pets.find(p => p.id === petId); if (pet) { pet.price = parseFloat(value) || 0; saveData(); if (isAdmin) saveAccountValueSnapshot(); renderAll(); } }
 
 function savePriceRecord() {
   if (!isAdmin) return;
@@ -1156,6 +995,7 @@ function savePetPriceRecord() {
 
 function deleteItem(itemId) { if (!isAdmin) return; if (confirm('确定删除此道具？')) { gameData.items = gameData.items.filter(i => i.id !== itemId); saveData(); renderAll(); } }
 function deletePet(petId) { if (!isAdmin) return; if (confirm('确定删除此宠物？')) { gameData.pets = gameData.pets.filter(p => p.id !== petId); saveData(); renderAll(); } }
+function deletePriceRecord(id) { if (!isAdmin) return; gameData.priceHistory = gameData.priceHistory.filter(p => p.id !== id); saveData(); renderAll(); }
 
 function updateAndSaveRate() {
   if (!isAdmin) return;
@@ -1165,8 +1005,7 @@ function updateAndSaveRate() {
   gameData.exchangeRate.jadeToGem = jadeToGem || gameData.exchangeRate.jadeToGem;
   gameData.exchangeRate.gemToRmb = gemToRmb || gameData.exchangeRate.gemToRmb;
   gameData.exchangeRate.feeRate = feeRate || gameData.exchangeRate.feeRate;
-  const today = getToday(), time = getNowTime();
-  gameData.rateHistory.push({ id: Date.now().toString(), date: today, time: time, jadeToGem: gameData.exchangeRate.jadeToGem, gemToRmb: gameData.exchangeRate.gemToRmb, feeRate: gameData.exchangeRate.feeRate });
+  gameData.rateHistory.push({ id: Date.now().toString(), date: getToday(), time: getNowTime(), jadeToGem: gameData.exchangeRate.jadeToGem, gemToRmb: gameData.exchangeRate.gemToRmb, feeRate: gameData.exchangeRate.feeRate });
   saveData(); renderAll();
   alert('兑换率已更新并保存！');
 }
@@ -1193,19 +1032,6 @@ function saveProfitRecord() {
   alert('收益记录已保存！');
 }
 
-function renderPriceHistoryTable() {
-  const today = getToday();
-  const allRecords = [...gameData.priceHistory].sort((a, b) => new Date(b.date + 'T' + (b.time || '00:00')) - new Date(a.date + 'T' + (a.time || '00:00')));
-  const todayRecords = allRecords.filter(p => p.date === today);
-  if (todayRecords.length > 0) {
-    document.getElementById('priceHistoryToday').innerHTML = `<div style="background:rgba(16,185,129,0.1);padding:8px;border-radius:4px;margin-bottom:8px;"><div style="font-size:12px;color:#10b981;margin-bottom:4px;">📅 今日记录 (${todayRecords.length}条)</div><div style="font-size:11px;color:#94a3b8;">${todayRecords.map(p => `${p.itemName}:${p.price}玉石 ${p.time || ''}`).join(' | ')}</div></div>`;
-  } else {
-    document.getElementById('priceHistoryToday').innerHTML = '<div style="color:#64748b;font-size:12px;padding:8px;">今日暂无价格记录</div>';
-  }
-  const historyRecords = allRecords.filter(p => p.date !== today).slice(0, 100);
-  document.getElementById('priceHistoryTable').innerHTML = historyRecords.map(p => `<tr><td>${p.date}</td><td>${p.time || '--:--'}</td><td>${p.itemName}</td><td>${p.price}</td>${isAdmin ? `<td><button class="delete-btn" onclick="deletePriceRecord('${p.id}')">🗑️</button></td>` : ''}</tr>`).join('');
-}
-
 function renderRateHistoryTable() {
   const records = [...gameData.rateHistory].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
   document.getElementById('rateHistoryTable').innerHTML = records.map(p => `<tr><td>${p.date}</td><td>${p.time || '--:--'}</td><td>${p.jadeToGem}</td><td>${p.gemToRmb}</td><td>${(p.feeRate*100).toFixed(0)}%</td>${isAdmin ? `<td><button class="delete-btn" onclick="deleteRateRecord('${p.id}')">🗑️</button></td>` : ''}</tr>`).join('');
@@ -1228,42 +1054,30 @@ function renderProfitHistoryTable() {
   }).join('');
 }
 
+function deleteRateRecord(id) { if (!isAdmin) return; gameData.rateHistory = gameData.rateHistory.filter(p => p.id !== id); saveData(); renderAll(); }
+function deleteProfitRecord(id) { if (!isAdmin) return; gameData.profitHistory = gameData.profitHistory.filter(p => p.id !== id); gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0); saveData(); renderAll(); }
+
+// ========== 图表 ==========
 function renderAccountValueChart() {
   if (!gameData) return;
   const accountId = document.getElementById('valueChartAccount')?.value || 'all';
   const range = document.getElementById('valueChartRange')?.value || 'month';
   let records = [...(gameData.accountValueHistory || [])];
   let startDate;
-  if (range === 'week') startDate = getWeekStart();
-  else if (range === 'month') startDate = getMonthStart();
-  else if (range === 'year') startDate = getYearStart();
-  else startDate = null;
+  if (range === 'week') startDate = getWeekStart(); else if (range === 'month') startDate = getMonthStart(); else if (range === 'year') startDate = getYearStart(); else startDate = null;
   if (startDate) records = records.filter(p => p.date >= startDate);
   records.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
   const grouped = {};
-  records.forEach(r => {
-    const key = r.date + ' ' + (r.time || '00:00');
-    if (!grouped[key]) grouped[key] = { date: r.date, time: r.time, total: 0, accounts: {} };
-    grouped[key].accounts[r.accountId] = r.totalValue;
-    grouped[key].total = Object.values(grouped[key].accounts).reduce((s, v) => s + v, 0);
-  });
+  records.forEach(r => { const key = r.date + ' ' + (r.time || '00:00'); if (!grouped[key]) grouped[key] = { date: r.date, time: r.time, total: 0, accounts: {} }; grouped[key].accounts[r.accountId] = r.totalValue; grouped[key].total = Object.values(grouped[key].accounts).reduce((s, v) => s + v, 0); });
   const keys = Object.keys(grouped).sort();
   if (accountValueChart) accountValueChart.destroy();
   const ctx = document.getElementById('accountValueChart').getContext('2d');
   const datasets = [];
-  if (accountId === 'all') {
-    gameData.accounts.forEach((acc, idx) => {
-      datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[acc.id] || 0), borderColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2 });
-    });
-  } else {
-    const acc = gameData.accounts.find(a => a.id === accountId);
-    if (acc) { datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[accountId] || 0), borderColor: ACCOUNT_COLORS[0], backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2 }); }
-  }
-  if (accountId === 'all') {
-    datasets.push({ label: '总价值（¥）', data: keys.map(k => grouped[k].total), borderColor: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.2)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 3 });
-  }
+  if (accountId === 'all') { gameData.accounts.forEach((acc, idx) => { datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[acc.id] || 0), borderColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2 }); }); }
+  else { const acc = gameData.accounts.find(a => a.id === accountId); if (acc) datasets.push({ label: acc.name, data: keys.map(k => grouped[k].accounts[accountId] || 0), borderColor: ACCOUNT_COLORS[0], backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2 }); }
+  if (accountId === 'all') datasets.push({ label: '总价值（¥）', data: keys.map(k => grouped[k].total), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.2)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 3 });
   const displayLabels = keys.map(k => { const [date, time] = k.split(' '); return time !== '00:00' ? `${formatDate(date)} ${time}` : formatDate(date); });
-  accountValueChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ¥' + context.parsed.y.toFixed(2); } } } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b', callback: function(value) { return '¥' + value.toFixed(0); } }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
+  accountValueChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ¥' + ctx.parsed.y.toFixed(2) } } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b', callback: v => '¥' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
 function renderPriceChart() {
@@ -1272,19 +1086,15 @@ function renderPriceChart() {
   const range = document.getElementById('priceChartRange')?.value || 'month';
   let records = gameData.priceHistory.filter(p => p.itemName === itemName);
   let startDate;
-  if (range === 'day') startDate = getToday();
-  else if (range === 'week') startDate = getWeekStart();
-  else if (range === 'month') startDate = getMonthStart();
-  else if (range === 'year') startDate = getYearStart();
-  else startDate = null;
+  if (range === 'day') startDate = getToday(); else if (range === 'week') startDate = getWeekStart(); else if (range === 'month') startDate = getMonthStart(); else if (range === 'year') startDate = getYearStart(); else startDate = null;
   if (startDate) records = records.filter(p => p.date >= startDate);
   records.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
   const weightedAvg = calcWeightedAvgPrice(itemName);
   if (priceChart) priceChart.destroy();
   const ctx = document.getElementById('priceChart').getContext('2d');
   const displayLabels = records.map(p => range === 'day' ? (p.time || '--:--') : formatDate(p.date));
-  const datasets = [{ label: itemName + ' 价格（玉石）', data: records.map(p => p.price), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
-  if (records.length > 0) { datasets.push({ label: '加权平均: ' + weightedAvg.toFixed(2), data: Array(records.length).fill(weightedAvg), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 }); }
+  const datasets = [{ label: itemName + ' 价格（玉石）', data: records.map(p => p.price), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
+  if (records.length > 0) datasets.push({ label: '加权平均: ' + weightedAvg.toFixed(2), data: Array(records.length).fill(weightedAvg), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 });
   priceChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } }, position: 'top' } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
@@ -1294,11 +1104,7 @@ function renderRateChart() {
   const range = document.getElementById('rateChartRange')?.value || 'month';
   let records = [...gameData.rateHistory];
   let startDate;
-  if (range === 'day') startDate = getToday();
-  else if (range === 'week') startDate = getWeekStart();
-  else if (range === 'month') startDate = getMonthStart();
-  else if (range === 'year') startDate = getYearStart();
-  else startDate = null;
+  if (range === 'day') startDate = getToday(); else if (range === 'week') startDate = getWeekStart(); else if (range === 'month') startDate = getMonthStart(); else if (range === 'year') startDate = getYearStart(); else startDate = null;
   if (startDate) records = records.filter(p => p.date >= startDate);
   records.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
   const avgRate = calcWeightedAvgRate();
@@ -1308,8 +1114,8 @@ function renderRateChart() {
   const dataKey = type === 'jadeToGem' ? 'jadeToGem' : 'gemToRmb';
   const label = type === 'jadeToGem' ? '玉石→宝石' : '宝石→人民币(¥)';
   const avgValue = type === 'jadeToGem' ? avgRate.jadeToGem : avgRate.gemToRmb;
-  const datasets = [{ label: label, data: records.map(p => p[dataKey]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
-  if (records.length > 0) { datasets.push({ label: '加权平均: ' + avgValue.toFixed(4), data: Array(records.length).fill(avgValue), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 }); }
+  const datasets = [{ label: label, data: records.map(p => p[dataKey]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
+  if (records.length > 0) datasets.push({ label: '加权平均: ' + avgValue.toFixed(4), data: Array(records.length).fill(avgValue), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 });
   rateChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } }, position: 'top' } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
@@ -1319,21 +1125,14 @@ function renderPetChart() {
   const range = document.getElementById('petChartRange')?.value || 'month';
   let records = (gameData.petPriceHistory || []).filter(p => p.petName === petName);
   let startDate;
-  if (range === 'day') startDate = getToday();
-  else if (range === 'week') startDate = getWeekStart();
-  else if (range === 'month') startDate = getMonthStart();
-  else if (range === 'year') startDate = getYearStart();
-  else startDate = null;
+  if (range === 'day') startDate = getToday(); else if (range === 'week') startDate = getWeekStart(); else if (range === 'month') startDate = getMonthStart(); else if (range === 'year') startDate = getYearStart(); else startDate = null;
   if (startDate) records = records.filter(p => p.date >= startDate);
   records.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
   if (petChart) petChart.destroy();
   const ctx = document.getElementById('petChart').getContext('2d');
   const displayLabels = records.map(p => range === 'day' ? (p.time || '--:--') : formatDate(p.date));
-  const datasets = [{ label: petName + ' 价格（宝石）', data: records.map(p => p.price), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
-  if (records.length > 0) {
-    const avgPrice = records.reduce((sum, p) => sum + p.price, 0) / records.length;
-    datasets.push({ label: '平均: ' + avgPrice.toFixed(2) + '宝石', data: Array(records.length).fill(avgPrice), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 });
-  }
+  const datasets = [{ label: petName + ' 价格（宝石）', data: records.map(p => p.price), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', fill: true, tension: 0.3, pointRadius: 4 }];
+  if (records.length > 0) { const avgPrice = records.reduce((s, p) => s + p.price, 0) / records.length; datasets.push({ label: '平均: ' + avgPrice.toFixed(2) + '宝石', data: Array(records.length).fill(avgPrice), borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [10, 5], fill: false, pointRadius: 0, borderWidth: 2 }); }
   petChart = new Chart(ctx, { type: 'line', data: { labels: displayLabels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } }, position: 'top' } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
@@ -1342,18 +1141,17 @@ function renderProfitChart() {
   const accountId = document.getElementById('profitChartAccount')?.value || 'all';
   let records = [...gameData.profitHistory];
   const grouped = {};
-  records.forEach(r => { if (!grouped[r.date]) { grouped[r.date] = { grossProfit: 0, consumeCost: 0, netProfit: 0, accounts: {} }; } grouped[r.date].grossProfit += r.grossProfit || 0; grouped[r.date].consumeCost += r.consumeCost || 0; grouped[r.date].netProfit += r.netProfit || 0; if (r.accountName) { if (!grouped[r.date].accounts[r.accountName]) grouped[r.date].accounts[r.accountName] = 0; grouped[r.date].accounts[r.accountName] += r.netProfit || 0; } });
+  records.forEach(r => { if (!grouped[r.date]) grouped[r.date] = { grossProfit: 0, consumeCost: 0, netProfit: 0, accounts: {} }; grouped[r.date].grossProfit += r.grossProfit || 0; grouped[r.date].consumeCost += r.consumeCost || 0; grouped[r.date].netProfit += r.netProfit || 0; if (r.accountName) { if (!grouped[r.date].accounts[r.accountName]) grouped[r.date].accounts[r.accountName] = 0; grouped[r.date].accounts[r.accountName] += r.netProfit || 0; } });
   const dates = Object.keys(grouped).sort();
   if (profitChart) profitChart.destroy();
   const ctx = document.getElementById('profitChart').getContext('2d');
   const accountNames = [...new Set(records.map(r => r.accountName).filter(Boolean))];
   const datasets = [];
   if (accountId === 'all' && accountNames.length > 0) { accountNames.forEach((name, idx) => { datasets.push({ label: name, data: dates.map(d => grouped[d].accounts[name] || 0), borderColor: ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2 }); }); }
-  datasets.push({ label: '净利润（¥）', data: dates.map(d => grouped[d].netProfit), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 3 });
+  datasets.push({ label: '净利润（¥）', data: dates.map(d => grouped[d].netProfit), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.2)', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 3 });
   let cumulative = 0;
-  const cumulativeData = dates.map(d => { cumulative += grouped[d].netProfit; return cumulative; });
-  datasets.push({ label: '累计收益（¥）', data: cumulativeData, borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2, borderDash: [5, 5] });
-  profitChart = new Chart(ctx, { type: 'line', data: { labels: dates.map(d => formatDate(d)), datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ¥' + context.parsed.y.toFixed(2); } } } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b', callback: function(value) { return '¥' + value.toFixed(0); } }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
+  datasets.push({ label: '累计收益（¥）', data: dates.map(d => { cumulative += grouped[d].netProfit; return cumulative; }), borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2, borderDash: [5, 5] });
+  profitChart = new Chart(ctx, { type: 'line', data: { labels: dates.map(d => formatDate(d)), datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'top' }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ¥' + ctx.parsed.y.toFixed(2) } } }, scales: { x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#64748b', callback: v => '¥' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.05)' } } } } });
 }
 
 function renderAccountCompareChart() {
@@ -1363,36 +1161,50 @@ function renderAccountCompareChart() {
   const accountNames = Object.keys(accountTotals);
   if (accountCompareChart) accountCompareChart.destroy();
   const ctx = document.getElementById('accountCompareChart').getContext('2d');
-  if (accountNames.length > 0) { accountCompareChart = new Chart(ctx, { type: 'doughnut', data: { labels: accountNames, datasets: [{ data: accountNames.map(name => accountTotals[name]), backgroundColor: accountNames.map((_, idx) => ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]), borderColor: '#1e293b', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': ¥' + context.parsed.toFixed(2); } } } } } }); }
+  if (accountNames.length > 0) { accountCompareChart = new Chart(ctx, { type: 'doughnut', data: { labels: accountNames, datasets: [{ data: accountNames.map(name => accountTotals[name]), backgroundColor: accountNames.map((_, idx) => ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length]), borderColor: '#1e293b', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 }, usePointStyle: true }, position: 'right' }, tooltip: { callbacks: { label: ctx => ctx.label + ': ¥' + ctx.parsed.toFixed(2) } } } } }); }
 }
 
-function deletePriceRecord(id) { if (!isAdmin) return; gameData.priceHistory = gameData.priceHistory.filter(p => p.id !== id); saveData(); renderAll(); renderPriceChart(); }
-function deleteRateRecord(id) { if (!isAdmin) return; gameData.rateHistory = gameData.rateHistory.filter(p => p.id !== id); saveData(); renderAll(); renderRateChart(); }
-function deleteProfitRecord(id) { if (!isAdmin) return; gameData.profitHistory = gameData.profitHistory.filter(p => p.id !== id); gameData.realizedProfit = gameData.profitHistory.reduce((sum, p) => sum + p.netProfit, 0); saveData(); renderAll(); renderProfitChart(); }
-
+// ========== 报表/导入/导出 ==========
 function initReportDates() { const today = getToday(); const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth() - 1); document.getElementById('reportStartDate').value = monthAgo.toISOString().split('T')[0]; document.getElementById('reportEndDate').value = today; }
-function generateReport(type) { const startDate = document.getElementById('reportStartDate').value; const endDate = document.getElementById('reportEndDate').value; const accountId = document.getElementById('reportAccount').value; let report = ''; if (type === 'all' || type === 'profit') { const profits = gameData.profitHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59') && (accountId === 'all' || p.accountId === accountId); }); if (profits.length > 0) { report += '【收益记录】\n'; profits.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(p => { const itemDetail = Object.entries(p.items || {}).map(([id, count]) => { const item = gameData.items.find(i => i.id === id); return item ? `${item.name}${count}` : ''; }).filter(Boolean).join(','); report += `日期: ${p.date}\n${p.accountName}: ${itemDetail},抓宠罐头${p.petCan || 0},消耗罐头${p.canConsume || 0}\n`; }); report += '\n'; } } if (type === 'all' || type === 'price') { const prices = gameData.priceHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59'); }); if (prices.length > 0) { report += '【道具价格】\n'; const grouped = {}; prices.forEach(p => { if (!grouped[p.date]) grouped[p.date] = []; grouped[p.date].push(p); }); Object.keys(grouped).sort().forEach(date => { const priceStr = grouped[date].map(p => `${p.itemName}${p.price}`).join(','); report += `价格 ${date}: ${priceStr}\n`; }); report += '\n'; } } if (type === 'all' || type === 'rate') { const rates = gameData.rateHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59'); }); if (rates.length > 0) { report += '【兑换率】\n'; rates.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(r => { report += `兑换率 ${r.date}: 玉石换宝石${r.jadeToGem},宝石换人民币${r.gemToRmb},手续费${(r.feeRate*100).toFixed(0)}\n`; }); } } currentReport = report || '没有符合条件的数据'; document.getElementById('reportPreview').textContent = currentReport; }
+
+function generateReport(type) {
+  const startDate = document.getElementById('reportStartDate').value;
+  const endDate = document.getElementById('reportEndDate').value;
+  const accountId = document.getElementById('reportAccount').value;
+  let report = '';
+  if (type === 'all' || type === 'profit') {
+    const profits = gameData.profitHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59') && (accountId === 'all' || p.accountId === accountId); });
+    if (profits.length > 0) { report += '【收益记录】\n'; profits.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(p => { const itemDetail = Object.entries(p.items || {}).map(([id, count]) => { const item = gameData.items.find(i => i.id === id); return item ? `${item.name}${count}` : ''; }).filter(Boolean).join(','); report += `日期: ${p.date}\n${p.accountName}: ${itemDetail},抓宠罐头${p.petCan || 0},消耗罐头${p.canConsume || 0}\n`; }); report += '\n'; }
+  }
+  if (type === 'all' || type === 'price') {
+    const prices = gameData.priceHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59'); });
+    if (prices.length > 0) { report += '【道具价格】\n'; const grouped = {}; prices.forEach(p => { if (!grouped[p.date]) grouped[p.date] = []; grouped[p.date].push(p); }); Object.keys(grouped).sort().forEach(date => { report += `价格 ${date}: ${grouped[date].map(p => `${p.itemName}${p.price}`).join(',')}\n`; }); report += '\n'; }
+  }
+  if (type === 'all' || type === 'rate') {
+    const rates = gameData.rateHistory.filter(p => { const d = new Date(p.date); return d >= new Date(startDate) && d <= new Date(endDate + 'T23:59:59'); });
+    if (rates.length > 0) { report += '【兑换率】\n'; rates.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(r => { report += `兑换率 ${r.date}: 玉石换宝石${r.jadeToGem},宝石换人民币${r.gemToRmb},手续费${(r.feeRate*100).toFixed(0)}\n`; }); }
+  }
+  currentReport = report || '没有符合条件的数据';
+  document.getElementById('reportPreview').textContent = currentReport;
+}
+
 function copyReport() { navigator.clipboard.writeText(currentReport).then(() => alert('已复制到剪贴板')); }
 function downloadReport() { const blob = new Blob([currentReport], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `收益报表_${getToday()}.txt`; a.click(); }
 function exportData() { const dataStr = JSON.stringify(gameData, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `游戏收益数据_${getToday()}.json`; a.click(); }
+
 function importData(event) {
   if (!isAdmin) { alert('普通用户无法导入数据'); return; }
-  const file = event.target.files[0];
-  if (!file) return;
+  const file = event.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const imported = JSON.parse(e.target.result);
       if (confirm('确定导入数据吗？当前数据将被覆盖。')) {
-        gameData = imported;
-        gameData.accounts.forEach(a => initAccountData(a));
+        gameData = imported; gameData.accounts.forEach(a => initAccountData(a));
         if (gameData.realizedProfit === undefined) gameData.realizedProfit = 0;
-        if (!gameData.rateHistory) gameData.rateHistory = [];
-        if (!gameData.investHistory) gameData.investHistory = [];
-        if (gameData.totalInvest === undefined) gameData.totalInvest = 0;
-        if (!gameData.lastDataDate) gameData.lastDataDate = getToday();
-        if (!gameData.pets) gameData.pets = DEFAULT_DATA.pets;
-        if (!gameData.petPriceHistory) gameData.petPriceHistory = [];
+        if (!gameData.rateHistory) gameData.rateHistory = []; if (!gameData.investHistory) gameData.investHistory = [];
+        if (gameData.totalInvest === undefined) gameData.totalInvest = 0; if (!gameData.lastDataDate) gameData.lastDataDate = getToday();
+        if (!gameData.pets) gameData.pets = DEFAULT_DATA.pets; if (!gameData.petPriceHistory) gameData.petPriceHistory = [];
         if (!gameData.accountValueHistory) gameData.accountValueHistory = [];
         saveData(); renderAll(); alert('导入成功！');
       }
@@ -1400,6 +1212,7 @@ function importData(event) {
   };
   reader.readAsText(file);
 }
+
 function parseAndImport() {
   if (!isAdmin) { alert('普通用户无法导入数据'); return; }
   const text = document.getElementById('importText').value;
@@ -1410,71 +1223,43 @@ function parseAndImport() {
     const dateMatch = line.match(/日期[:\s]*(\d{4}-\d{2}-\d{2})/);
     if (dateMatch) { currentDate = dateMatch[1]; return; }
     const timeMatch = line.match(/(\d{1,2}:\d{2})/);
-    if (timeMatch) currentTime = timeMatch[1];
-    else currentTime = getNowTime();
+    currentTime = timeMatch ? timeMatch[1] : getNowTime();
     if (line.includes('价格')) {
       const priceMatch = line.match(/价格[^:]*:\s*(.+)/);
-      if (priceMatch) {
-        const items = priceMatch[1].split(',');
-        items.forEach(item => {
-          const match = item.match(/(.+?)(\d+\.?\d*)$/);
-          if (match && currentDate) {
-            const name = match[1].trim(), price = parseFloat(match[2]);
-            gameData.priceHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, itemName: name, price: price });
-            importCount++;
-          }
-        });
-      }
+      if (priceMatch) { priceMatch[1].split(',').forEach(item => { const match = item.match(/(.+?)(\d+\.?\d*)$/); if (match && currentDate) { gameData.priceHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, itemName: match[1].trim(), price: parseFloat(match[2]) }); importCount++; } }); }
     }
     if (line.includes('兑换率')) {
-      const jadeMatch = line.match(/玉石换宝石(\d+\.?\d*)/);
-      const gemMatch = line.match(/宝石换人民币(\d+\.?\d*)/);
-      const feeMatch = line.match(/手续费(\d+)/);
-      if (currentDate && (jadeMatch || gemMatch || feeMatch)) {
-        gameData.rateHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, jadeToGem: jadeMatch ? parseFloat(jadeMatch[1]) : gameData.exchangeRate.jadeToGem, gemToRmb: gemMatch ? parseFloat(gemMatch[1]) : gameData.exchangeRate.gemToRmb, feeRate: feeMatch ? parseFloat(feeMatch[1]) / 100 : gameData.exchangeRate.feeRate });
-        importCount++;
-      }
+      const jadeMatch = line.match(/玉石换宝石(\d+\.?\d*)/); const gemMatch = line.match(/宝石换人民币(\d+\.?\d*)/); const feeMatch = line.match(/手续费(\d+)/);
+      if (currentDate && (jadeMatch || gemMatch || feeMatch)) { gameData.rateHistory.push({ id: Date.now().toString() + Math.random(), date: currentDate, time: currentTime, jadeToGem: jadeMatch ? parseFloat(jadeMatch[1]) : gameData.exchangeRate.jadeToGem, gemToRmb: gemMatch ? parseFloat(gemMatch[1]) : gameData.exchangeRate.gemToRmb, feeRate: feeMatch ? parseFloat(feeMatch[1]) / 100 : gameData.exchangeRate.feeRate }); importCount++; }
     }
     const accountMatch = line.match(/^(.+?)[:\s](.+)$/);
     if (accountMatch && currentDate && !line.includes('价格') && !line.includes('兑换率') && !line.includes('日期')) {
-      const accountName = accountMatch[1].trim(), dataStr = accountMatch[2];
-      const account = gameData.accounts.find(a => a.name === accountName);
-      if (account) {
-        initAccountData(account);
-        const itemPattern = /(.+?)(\d+)/g;
-        let match;
-        while ((match = itemPattern.exec(dataStr)) !== null) {
-          const itemName = match[1].trim(), count = parseInt(match[2]);
-          if (itemName === '抓宠罐头') account.dailyData.petCan = count;
-          else if (itemName === '消耗罐头') account.dailyData.canConsume = count;
-          else { const item = gameData.items.find(i => i.name === itemName); if (item) account.dailyData.items[item.id] = count; }
-        }
-        importCount++;
-      }
+      const account = gameData.accounts.find(a => a.name === accountMatch[1].trim());
+      if (account) { initAccountData(account); const itemPattern = /(.+?)(\d+)/g; let match; while ((match = itemPattern.exec(accountMatch[2])) !== null) { const itemName = match[1].trim(), count = parseInt(match[2]); if (itemName === '抓宠罐头') account.dailyData.petCan = count; else if (itemName === '消耗罐头') account.dailyData.canConsume = count; else { const item = gameData.items.find(i => i.name === itemName); if (item) account.dailyData.items[item.id] = count; } } importCount++; }
     }
   });
-  if (importCount > 0) { saveData(); renderAll(); document.getElementById('importResult').innerHTML = `<div style="color:#10b981;">✅ 成功导入 ${importCount} 条记录</div>`; } else { document.getElementById('importResult').innerHTML = `<div style="color:#ef4444;">❌ 未识别到有效数据</div>`; }
+  if (importCount > 0) { saveData(); renderAll(); document.getElementById('importResult').innerHTML = `<div style="color:#10b981;">✅ 成功导入 ${importCount} 条记录</div>`; }
+  else { document.getElementById('importResult').innerHTML = `<div style="color:#ef4444;">❌ 未识别到有效数据</div>`; }
 }
+
 async function resetAllData() {
   if (!isAdmin) return;
   if (confirm('确定要重置所有数据吗？此操作不可恢复！')) {
-    try {
-      await fetch('/api/data', { method: 'DELETE', headers: { 'x-user-id': currentUserId || '1' } });
-      gameData = await loadData();
-      renderAll();
-      alert('数据已重置！');
-    } catch (e) { console.error('重置失败:', e); alert('重置失败，请重试'); }
+    try { await fetch('/api/data', { method: 'DELETE', headers: { 'x-user-id': currentUserId || '1' } }); gameData = await loadData(); renderAll(); alert('数据已重置！'); }
+    catch (e) { console.error('重置失败:', e); alert('重置失败，请重试'); }
   }
 }
+
 function showAddAccountModal() { document.getElementById('addAccountModal').classList.add('show'); document.getElementById('newAccountName').value = ''; }
 function hideAddAccountModal() { document.getElementById('addAccountModal').classList.remove('show'); }
 function addAccount() { const name = document.getElementById('newAccountName').value.trim(); if (!name) { alert('请输入账号名称'); return; } const newAccount = { id: Date.now().toString(), name: name, dailyData: {}, ownedPets: {} }; initAccountData(newAccount); gameData.accounts.push(newAccount); saveData(); hideAddAccountModal(); renderAll(); }
 function showAddItemModal() { if (!isAdmin) return; document.getElementById('addItemModal').classList.add('show'); document.getElementById('newItemName').value = ''; document.getElementById('newItemPrice').value = '0'; }
 function hideAddItemModal() { document.getElementById('addItemModal').classList.remove('show'); }
-function addItem() { if (!isAdmin) return; const name = document.getElementById('newItemName').value.trim(); const price = parseFloat(document.getElementById('newItemPrice').value) || 0; if (!name) { alert('请输入道具名称'); return; } const newItem = { id: Date.now().toString(), name: name, price: price }; gameData.items.push(newItem); saveData(); hideAddItemModal(); renderAll(); }
+function addItem() { if (!isAdmin) return; const name = document.getElementById('newItemName').value.trim(); const price = parseFloat(document.getElementById('newItemPrice').value) || 0; if (!name) { alert('请输入道具名称'); return; } gameData.items.push({ id: Date.now().toString(), name: name, price: price }); saveData(); hideAddItemModal(); renderAll(); }
 function showAddPetModal() { if (!isAdmin) return; document.getElementById('addPetModal').classList.add('show'); document.getElementById('newPetName').value = ''; document.getElementById('newPetPrice').value = '0'; }
 function hideAddPetModal() { document.getElementById('addPetModal').classList.remove('show'); }
-function addPet() { if (!isAdmin) return; const name = document.getElementById('newPetName').value.trim(); const price = parseFloat(document.getElementById('newPetPrice').value) || 0; if (!name) { alert('请输入宠物名称'); return; } const newPet = { id: 'p' + Date.now().toString(), name: name, price: price }; gameData.pets.push(newPet); saveData(); hideAddPetModal(); renderAll(); }
+function addPet() { if (!isAdmin) return; const name = document.getElementById('newPetName').value.trim(); const price = parseFloat(document.getElementById('newPetPrice').value) || 0; if (!name) { alert('请输入宠物名称'); return; } gameData.pets.push({ id: 'p' + Date.now().toString(), name: name, price: price }); saveData(); hideAddPetModal(); renderAll(); }
+
 async function init() { if (checkLogin()) { gameData = await loadData(); currentAccountId = gameData.accounts[0]?.id || '1'; renderAll(); initReportDates(); } }
 init();
   </script>
